@@ -5,6 +5,7 @@ DOCK_NAME=alidock
 IMAGE_NAME=alidock
 RUN_DIR=/tmp/alidock
 SHARED_DIR=/tmp/alidock_shared
+DO_DEBUG=
 
 # Print in colors
 function log() { printf "\033[1;32m$1\033[m\n"; }
@@ -31,6 +32,8 @@ case "$CMD" in
     exit 1
   ;;
 esac
+
+[[ $DO_DEBUG ]] && set -x || DONT_DEBUG=1
 
 # Check if Docker is working
 ERR=0
@@ -102,10 +105,10 @@ EOF
   docker run --rm -d -p 50022:22 --name $DOCK_NAME -v "$SHARED_DIR:/shared:rw" $IMAGE_NAME /usr/sbin/sshd -D > $RUN_DIR/container_id  # -ddd
   ssh-keygen -t rsa -f $RUN_DIR/id_rsa -N '' &> /dev/null
   docker exec $DOCK_NAME bash -c "useradd -d /shared -M -N -s /bin/bash -u $CUR_UID $CUR_UNAME"
-  docker exec $DOCK_NAME su "$CUR_UNAME" -c "mkdir -p /shared/.ssh && touch /shared/.hushlogin && echo $(cat $RUN_DIR/id_rsa.pub) > /shared/.ssh/authorized_keys && chmod -R u=rwX,g=rX,o=rX /shared/.ssh"
+  docker exec $DOCK_NAME su "$CUR_UNAME" -c "mkdir -p /shared/.ssh && rm -f /shared/.hushlogin && ${DONT_DEBUG:+touch /shared/.hushlogin &&} echo $(cat $RUN_DIR/id_rsa.pub) > /shared/.ssh/authorized_keys && chmod -R u=rwX,g=rX,o=rX /shared/.ssh"
 fi
 
 if [[ $DO_ENTER ]]; then
   log "Starting a shell into the container"
-  exec ssh localhost -p 50022 -Y -F /dev/null -oForwardX11Trusted=no -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -l $(whoami) -i $RUN_DIR/id_rsa
+  exec ssh localhost -p 50022 -Y -F /dev/null -oForwardX11Trusted=no -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -l $(whoami) ${DONT_DEBUG:+-oLogLevel=QUIET} -i $RUN_DIR/id_rsa
 fi
