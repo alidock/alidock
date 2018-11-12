@@ -107,5 +107,5 @@ fi
 
 if [[ $DO_ENTER ]]; then
   log "Starting a shell into the container"
-  exec ssh localhost -p 50022 -X -F /dev/null -oForwardX11Trusted=no -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -l $(whoami) -oLogLevel=QUIET -i $RUN_DIR/id_rsa
+  exec ssh localhost -p 50022 -Y -F /dev/null -oForwardX11Trusted=no -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -l $(whoami) -i $RUN_DIR/id_rsa
 fi
