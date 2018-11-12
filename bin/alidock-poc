@@ -1,11 +1,12 @@
 #!/bin/bash -e
 
 # Configuration
+DO_DEBUG=
 DOCK_NAME=alidock
 IMAGE_NAME=alidock
 RUN_DIR=/tmp/alidock
 SHARED_DIR=/tmp/alidock_shared
-DO_DEBUG=
+SSH_ENTRYPOINT=
 
 # Print in colors
 function log() { printf "\033[1;32m$1\033[m\n"; }
@@ -15,6 +16,11 @@ function logerr() { printf "\033[1;31m$1\033[m\n"; }
 CMD="$1"
 case "$CMD" in
   enter|'')
+    DO_CREATE=1
+    DO_ENTER=1
+  ;;
+  enter-tmux)
+    SSH_ENTRYPOINT='-t tmux -u -CC new-session -A -s alidock-tmux-session'
     DO_CREATE=1
     DO_ENTER=1
   ;;
@@ -124,5 +130,5 @@ fi
 
 if [[ $DO_ENTER ]]; then
   log "Starting a shell into the container"
-  exec ssh localhost -p 50022 -Y -F /dev/null -oForwardX11Trusted=no -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -l $(whoami) ${DONT_DEBUG:+-oLogLevel=QUIET} -i $RUN_DIR/id_rsa
+  exec ssh localhost -p 50022 -Y -F /dev/null -oForwardX11Trusted=no -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -l $(whoami) ${DONT_DEBUG:+-oLogLevel=QUIET} -i $RUN_DIR/id_rsa $SSH_ENTRYPOINT
 fi
