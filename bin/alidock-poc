@@ -21,11 +21,14 @@ case "$CMD" in
   status)
     DO_STATUS=1
   ;;
-  create)
+  start|create)
     DO_CREATE=1
   ;;
-  stop|destroy|kill)
+  stop|destroy|rm|kill)
     DO_DESTROY=1
+  ;;
+  update)
+    DO_UPDATE=1
   ;;
   *)
     logerr "Unknown command: $CMD"
@@ -48,9 +51,20 @@ if [[ $DO_DESTROY ]]; then
   docker rm -f $DOCK_NAME &> /dev/null
 fi
 
+if [[ $DO_UPDATE ]]; then
+  log "Updating container to the latest version"
+  docker pull $DOCK_NAME
+fi
+
 # Check if a container named alidock exists
 ERR=0
 docker exec $DOCK_NAME /bin/true &> /dev/null || ERR=$?
+
+if [[ $DO_UPDATE && $ERR == 0 ]]; then
+  logerr "You have a container running. If you want to run with the new one:"
+  logerr "  $0 stop"
+  logerr "  $0"
+fi
 
 if [[ $DO_STATUS ]]; then
   if [[ $ERR == 0 ]]; then
@@ -104,8 +118,8 @@ EOF
   docker rm -f $DOCK_NAME &> /dev/null || true
   docker run --rm -d -p 50022:22 --name $DOCK_NAME -v "$SHARED_DIR:/shared:rw" $IMAGE_NAME /usr/sbin/sshd -D > $RUN_DIR/container_id  # -ddd
   ssh-keygen -t rsa -f $RUN_DIR/id_rsa -N '' &> /dev/null
-  docker exec $DOCK_NAME bash -c "useradd -d /shared -M -N -s /bin/bash -u $CUR_UID $CUR_UNAME"
-  docker exec $DOCK_NAME su "$CUR_UNAME" -c "mkdir -p /shared/.ssh && rm -f /shared/.hushlogin && ${DONT_DEBUG:+touch /shared/.hushlogin &&} echo $(cat $RUN_DIR/id_rsa.pub) > /shared/.ssh/authorized_keys && chmod -R u=rwX,g=rX,o=rX /shared/.ssh"
+  docker exec $DOCK_NAME bash -c "${DO_DEBUG:+set -x;} useradd -d /shared -M -N -s /bin/bash -u $CUR_UID $CUR_UNAME"
+  docker exec $DOCK_NAME su "$CUR_UNAME" -c "${DO_DEBUG:+set -x;} mkdir -p /shared/.ssh && ${DO_DEBUG:+rm -f /shared/.hushlogin &&} ${DONT_DEBUG:+touch /shared/.hushlogin &&} echo $(cat $RUN_DIR/id_rsa.pub) > /shared/.ssh/authorized_keys && chmod -R u=rwX,g=rX,o=rX /shared/.ssh"
 fi
 
 if [[ $DO_ENTER ]]; then
