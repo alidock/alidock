@@ -74,7 +74,9 @@ if [[ $DO_CREATE && $ERR != 0 ]]; then
 
   rm -rf "$RUN_DIR"
   mkdir -p "$RUN_DIR"
+  chmod 0755 "$SHARED_DIR"  # fix before
   mkdir -p "$SHARED_DIR"
+  chmod 0755 "$SHARED_DIR"  # fix after too
 
   # No .bashrc/.bash_profile?
   if [[ ! -e $SHARED_DIR/.bashrc ]]; then
@@ -100,7 +102,7 @@ EOF
   docker run --rm -d -p 50022:22 --name $DOCK_NAME -v "$SHARED_DIR:/shared:rw" $IMAGE_NAME /usr/sbin/sshd -D > $RUN_DIR/container_id  # -ddd
   ssh-keygen -t rsa -f $RUN_DIR/id_rsa -N '' &> /dev/null
   docker exec $DOCK_NAME bash -c "useradd -d /shared -M -N -s /bin/bash -u $CUR_UID $CUR_UNAME"
-  docker exec $DOCK_NAME bash -c "mkdir -p /shared/.ssh && touch /shared/.hushlogin && echo $(cat $RUN_DIR/id_rsa.pub) > /shared/.ssh/authorized_keys"
+  docker exec $DOCK_NAME bash -c "mkdir -p /shared/.ssh && touch /shared/.hushlogin && echo $(cat $RUN_DIR/id_rsa.pub) > /shared/.ssh/authorized_keys && chmod -R u=rwX,g=rX,o=rX /shared/.ssh"
 fi
 
 if [[ $DO_ENTER ]]; then
