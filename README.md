@@ -1,6 +1,8 @@
 alidock
 =======
 
+[![Build Status](https://travis-ci.com/dberzano/alidock.svg?branch=master)](https://travis-ci.com/dberzano/alidock)
+
 Run your ALICE environment from a container easily. For the moment this is under heavy development
 and not ready for production.
 
