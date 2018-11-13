@@ -2,18 +2,22 @@ dist: trusty
 language: python
 python:
   - "2.7"
-  - "3.7"
+  - "3.7-dev"
 #services:
 #  - docker
 #cache:
 #  directories:
 #    - $HOME/sw/TARS
 install: |
-  pip install pylint
+  set -e
+  set -o pipefail
+  for PKG in pylint argparse requests PyYaml docker Jinja2; do
+    pip install "$PKG"
+  done
 script: |
   set -e
   set -o pipefail
-  ( grep -l '#!/usr/bin/env python' bin/* ; find . -name '*.py' -a -not -name 'setup.py' ) | xargs pylint
+  ci/run-tests.sh
 #after_success:
 #  - bash <(curl -s https://codecov.io/bash)
 #env:
