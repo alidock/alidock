@@ -1,0 +1,8 @@
+[FORMAT]
+indent-string='    '
+max-line-length=80
+
+[BASIC]
+function-naming-style=camelCase
+argument-naming-style=camelCase
+variable-naming-style=camelCase

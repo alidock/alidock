@@ -1,0 +1,4 @@
+#!/usr/bin/env python
+
+if None:
+  print "ipopop"

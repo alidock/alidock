@@ -1,0 +1,22 @@
+dist: trusty
+language: python
+python:
+  - "2.7"
+  - "3.7"
+#services:
+#  - docker
+#cache:
+#  directories:
+#    - $HOME/sw/TARS
+install: |
+  pip install pylint
+script: |
+  set -e
+  set -o pipefail
+  ( grep -l '#!/usr/bin/env python' bin/* ; find . -name '*.py' -a -not -name 'setup.py' ) | xargs pylint
+#after_success:
+#  - bash <(curl -s https://codecov.io/bash)
+#env:
+#  global:
+#    - secure: "..."
+#    - NOKOGIRI_USE_SYSTEM_LIBRARIES=true  # speeds up installation of html-proofer
