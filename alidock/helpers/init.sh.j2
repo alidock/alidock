@@ -1,0 +1,34 @@
+#!/bin/bash -ex
+
+# Init script for alidock. Will run inside the container. Auto-generated.
+
+# Log into the shared directory to allow debug
+exec &> >(tee "{{sharedDir}}/.init.log")
+
+# Create server's SSH key
+rm -f /etc/ssh/ssh_host_rsa_key
+ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -N ''
+
+# Create a user with the same name/UID as the user outside the container
+useradd -d "{{sharedDir}}" -M -N -s /bin/bash -u "{{userId}}" "{{userName}}"
+chmod 0755 "{{sharedDir}}"
+chown "{{userName}}" "{{sharedDir}}"
+
+# Create a SSH key for that user and authorize it
+mkdir -p "{{sharedDir}}/.ssh"
+pushd "{{sharedDir}}/.ssh"
+  rm -f id_rsa id_rsa.pub
+  ssh-keygen -t rsa -f id_rsa -N ''
+  cp id_rsa.pub authorized_keys
+popd
+chmod -R u=rwX,g=rX,o=rX "{{sharedDir}}/.ssh"
+chmod -R 0600 "{{sharedDir}}/.ssh/id_rsa"
+chown -R "{{userName}}" "{{sharedDir}}/.ssh"
+
+# Silence login messages ("Last login:...")
+touch "{{sharedDir}}/.hushlogin"
+chown "{{userName}}" "{{sharedDir}}/.hushlogin"
+
+# Start the SSH server
+cd /
+exec /usr/sbin/sshd -D

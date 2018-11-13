@@ -1,1 +1,3 @@
 alidock.egg-info
+*.pyc
+*.swp

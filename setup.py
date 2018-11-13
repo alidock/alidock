@@ -55,7 +55,7 @@ setup(
   # your project is installed. For an analysis of "install_requires" vs pip's
   # requirements files see:
   # https://packaging.python.org/en/latest/requirements.html
-  install_requires=[ "argparse", "requests", "PyYaml" ],
+  install_requires=[ "argparse", "requests", "PyYaml", "docker", "Jinja2" ],
 
   python_requires='>=2.7',
 
@@ -70,7 +70,7 @@ setup(
   # installed, specify them here.  If using Python 2.6 or less, then these
   # have to be included in MANIFEST.in as well.
   include_package_data=True,
-  package_data={},
+  package_data={ "alidock.helpers": ["init.sh.j2"] },
 
   # Although 'package_data' is the preferred approach, in some case you may
   # need to place data files outside of your packages. See:
@@ -81,7 +81,9 @@ setup(
   # To provide executable scripts, use entry points in preference to the
   # "scripts" keyword. Entry points provide cross-platform support and allow
   # pip to create the appropriate form of executable for the target platform.
-  # entry_points={
-  # },
-  scripts = glob("bin/*")
+  # See: https://chriswarrick.com/blog/2014/09/15/python-apps-the-right-way-entry_points-and-scripts/
+  entry_points={
+      "console_scripts": [ "alidock = alidock:entrypoint" ]
+  }  #,
+  #scripts = glob("bin/*")
 )
