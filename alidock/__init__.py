@@ -51,6 +51,9 @@ class AliDock(object):
     def shell(self):
         os.execvp("ssh", self.getSshCommand())
 
+    def rootShell(self):
+        os.execvp("docker", ["docker", "exec", "-it", self.dockName, "/bin/bash"])
+
     def run(self):
         # Create directory to be shared with the container
         try:
@@ -92,20 +95,23 @@ def entrypoint():
     argp.add_argument("--debug", dest="debug", default=False, action="store_true",
                       help="Enable debug messages")
     argp.add_argument("action", default="enter", nargs="?",
-                      choices=["enter", "start", "status", "stop"],
+                      choices=["enter", "root", "start", "status", "stop"],
                       help="What to do")
     args = argp.parse_args()
     aliDock = AliDock()
 
-    if args.action in ["enter", "start"]:
+    if args.action in ["enter", "start", "root"]:
         if not aliDock.isRunning():
             info("Creating container, hold on")
             aliDock.run()
-            if args.action == "enter":
+            if args.action in ["enter", "root"]:
                 aliDock.waitSshUp()
         if args.action == "enter":
             info("Starting a shell into the container")
             aliDock.shell()
+        elif args.action == "root":
+            info("Starting a root shell into the container (use it at your own risk)")
+            aliDock.rootShell()
     elif args.action == "status":
         error("status not implemented")
     elif args.action == "stop":
