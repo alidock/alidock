@@ -29,6 +29,15 @@ chown -R "{{userName}}" "{{sharedDir}}/.ssh"
 touch "{{sharedDir}}/.hushlogin"
 chown "{{userName}}" "{{sharedDir}}/.hushlogin"
 
-# Start the SSH server
 cd /
+
+# Check if we can resolve domain names; if we can't we start cloudflared
+ERR=0
+getent hosts www.google.com &> /dev/null || ERR=$?
+if [[ $ERR != 0 ]]; then
+  nohup cloudflared proxy-dns &> /dev/null &
+  printf '# Use cloudflared\nnameserver 127.0.0.1\n' > /etc/resolv.conf
+fi
+
+# Start the SSH server
 exec /usr/sbin/sshd -D
