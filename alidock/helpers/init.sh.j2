@@ -5,6 +5,8 @@
 # Log into the shared directory to allow debug
 exec &> >(tee "{{sharedDir}}/.init.log")
 
+cd /
+
 # Create server's SSH key
 rm -f /etc/ssh/ssh_host_rsa_key
 ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -N ''
@@ -29,7 +31,31 @@ chown -R "{{userName}}" "{{sharedDir}}/.ssh"
 touch "{{sharedDir}}/.hushlogin"
 chown "{{userName}}" "{{sharedDir}}/.hushlogin"
 
-cd /
+# Change global prompt
+cat > /etc/profile.d/alidock.sh <<\EOF
+#!/bin/bash
+[[ $_ALIDOCK_ENV ]] && return 0;
+function _alidock_ps1() {
+  local RV=$?
+  [[ $RV != 0 ]] && echo -n "$RV|"
+}
+export -f _alidock_ps1
+export PS1='`_alidock_ps1`[alidock] \w \$> '
+export _ALIDOCK_ENV=1
+EOF
+
+# Create skeleton .bashrc/.bash_profile
+pushd "{{sharedDir}}"
+  [[ -f .bashrc ]] || cat > .bashrc <<\EOF
+source /etc/bashrc
+# Add your modifications below
+EOF
+  [[ -f .bash_profile ]] || cat > .bash_profile <<\EOF
+[[ -f ~/.bashrc ]] && source ~/.bashrc
+# Add your modifications below
+EOF
+  chown "{{userName}}" .bashrc .bash_profile
+popd
 
 # Check if we can resolve domain names; if we can't we start cloudflared
 ERR=0
