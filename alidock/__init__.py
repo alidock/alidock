@@ -66,8 +66,9 @@ class AliDock(object):
                 return True
         return False
 
-    def shell(self):
-        os.execvp("ssh", self.getSshCommand())
+    def shell(self, cmdList=None):
+        shellCmd = self.getSshCommand() if cmdList is None else self.getSshCommand() + cmdList
+        os.execvp(shellCmd[0], shellCmd)
 
     def rootShell(self):
         os.execvp("docker", ["docker", "exec", "-it", self.dockName, "/bin/bash"])
@@ -117,7 +118,7 @@ def entrypoint():
     argp.add_argument("--quiet", dest="quiet", default=False, action="store_true",
                       help="Do not print any message")
     argp.add_argument("action", default="enter", nargs="?",
-                      choices=["enter", "root", "start", "status", "stop"],
+                      choices=["enter", "enter-tmux", "root", "start", "status", "stop"],
                       help="What to do")
     args = argp.parse_args()
 
@@ -145,6 +146,10 @@ def processEnterStart(aliDock, args):
         LOG.info("Starting a shell into the container")
         aliDock.waitSshUp()
         aliDock.shell()
+    elif args.action == "enter-tmux":
+        LOG.info("Starting or resuming a tmux session into the container")
+        aliDock.waitSshUp()
+        aliDock.shell(cmdList=["-t", "tmux", "-u", "-CC", "new-session", "-A", "-s", "ad-tmux"])
     elif args.action == "root":
         LOG.info("Starting a root shell into the container (use it at your own risk)")
         aliDock.rootShell()
@@ -164,8 +169,7 @@ def processStop(aliDock):
 
 def processActions(args):
     aliDock = AliDock()
-
-    if args.action in ["enter", "start", "root"]:
+    if args.action in ["enter", "start", "root", "enter-tmux"]:
         processEnterStart(aliDock, args)
     elif args.action == "status":
         processStatus(aliDock)
