@@ -2,26 +2,22 @@ alidock
 =======
 
 [![Build Status](https://travis-ci.com/dberzano/alidock.svg?branch=master)](https://travis-ci.com/dberzano/alidock)
+[![PyPI version](https://badge.fury.io/py/alidock.svg)](https://badge.fury.io/py/alidock)
 
-Run your ALICE environment from a container easily. For the moment this is under heavy development
-and not ready for production.
+Run your ALICE environment from a container. Install [Docker](https://docs.docker.com/install/),
+then:
 
-How to use the Proof of Concept: clone this repository, and then:
+    pip install alidock
+    alidock
 
-    cd etc
-    docker build . -t alidock
-    cd ..
-    bin/alidock-poc
+You are instantly dropped in a shell with a consistent ALICE environment from a Docker container.
+From there you can directly run, for example:
 
-Every other shell can be opened rerunning:
+    aliBuild build init O2
+    aliBuild build O2 --defaults o2
 
-    bin/alidock-poc
+and it will download the precompiled binaries for you.
 
-The container will run in the background. You can stop the container with:
-
-    bin/alidock-poc stop
-
-For the moment, the project shares a local directory whose location is:
-
-  * `/tmp/alidock_shared` on your laptop,
-  * `/shared` inside the container (which is also the container user's home dir)
+Your home directory in the container, called `/home/alidock`, is available from outside the
+container in `~/alidock`. This means you can use your favourite text editor or IDE from your laptop,
+no need to edit from inside the container.
