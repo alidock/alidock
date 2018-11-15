@@ -2,13 +2,6 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 from glob import glob
-try:
-  import pypandoc
-  def readme_to_rst():
-    return "\n".join([ l for l in pypandoc.convert_file("README.md", "rst").split("\n") if not "PyPI version" in l ])
-except ImportError:
-  def readme_to_rst():
-    return ""
 
 setup(
   name='alidock',
@@ -17,7 +10,12 @@ setup(
   version='LAST_TAG',
 
   description='Run your ALICE environment from a container easily',
-  long_description=readme_to_rst(),
+
+  # Long description from Markdown
+  # https://dustingram.com/articles/2018/03/16/markdown-descriptions-on-pypi
+  long_description=open('README.md').read(),
+  ong_description_content_type='text/markdown',
+
   url='https://github.com/dberzano/alidock',
   author='Dario Berzano',
   author_email='dario.berzano@cern.ch',
@@ -87,6 +85,5 @@ setup(
   # See: https://chriswarrick.com/blog/2014/09/15/python-apps-the-right-way-entry_points-and-scripts/
   entry_points={
       "console_scripts": [ "alidock = alidock:entrypoint" ]
-  }  #,
-  #scripts = glob("bin/*")
+  }
 )
