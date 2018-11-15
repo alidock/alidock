@@ -1,5 +1,7 @@
 dist: trusty
 language: python
+services:
+  - docker
 python:
   - "2.7"
   - "3.7-dev"

@@ -4,11 +4,20 @@ cd "$(dirname "$0")"/..
 # What tests to run based on what changed (on Travis)
 if [[ $TRAVIS_COMMIT_RANGE ]]; then
   RUN_SETUP=1
+  [[ $TRAVIS_PYTHON_VERSION == 3* ]] && RUN_DOCK=1 || RUN_DOCK=  # no need to run multiple times
   git diff --name-only $TRAVIS_COMMIT_RANGE | grep -q ^setup.py$ || RUN_SETUP=
+  git diff --name-only $TRAVIS_COMMIT_RANGE | grep -q ^dock/     || RUN_DOCK=
 fi
 
 # Pylint
 find . -name '*.py' -a -not -name 'setup.py' | xargs pylint
+
+# Docker
+if [[ $RUN_DOCK ]]; then
+  pushd dock
+    docker build .
+  popd
+fi
 
 # Deployment/test sdist creation
 if [[ $TRAVIS_PYTHON_VERSION == 3* && $TRAVIS_TAG && $TRAVIS_PULL_REQUEST == false ]]; then

@@ -10,6 +10,3 @@ RUN cd /tmp && \
     mv -v cloudflared /usr/sbin && \
     which cloudflared && \
     rm -f /tmp/cloudflared*.tgz
-
-#RUN yum install -y openssh-server
-#RUN yum groupinstall -y 'X Window System'
