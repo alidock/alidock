@@ -66,9 +66,8 @@ class AliDock(object):
                 return True
         return False
 
-    def shell(self, cmdList=None):
-        shellCmd = self.getSshCommand() if cmdList is None else self.getSshCommand() + cmdList
-        os.execvp(shellCmd[0], shellCmd)
+    def shell(self, cmd=None):
+        os.execvp("ssh", self.getSshCommand() + (cmd if cmd else []))
 
     def rootShell(self):
         os.execvp("docker", ["docker", "exec", "-it", self.dockName, "/bin/bash"])
@@ -117,8 +116,10 @@ def entrypoint():
     argp = ArgumentParser()
     argp.add_argument("--quiet", dest="quiet", default=False, action="store_true",
                       help="Do not print any message")
+    argp.add_argument("--tmux", dest="tmux", default=False, action="store_true",
+                      help="Start or resume a detachable tmux session")
     argp.add_argument("action", default="enter", nargs="?",
-                      choices=["enter", "enter-tmux", "root", "start", "status", "stop"],
+                      choices=["enter", "root", "start", "status", "stop"],
                       help="What to do")
     args = argp.parse_args()
 
@@ -143,13 +144,14 @@ def processEnterStart(aliDock, args):
         LOG.info("Creating container, hold on")
         aliDock.run()
     if args.action == "enter":
-        LOG.info("Starting a shell into the container")
+        if args.tmux:
+            LOG.info("Resuming tmux session in the container")
+            cmd = ["-t", "tmux", "-u", "-CC", "new-session", "-A", "-s", "ad-tmux"]
+        else:
+            LOG.info("Starting a shell into the container")
+            cmd = []
         aliDock.waitSshUp()
-        aliDock.shell()
-    elif args.action == "enter-tmux":
-        LOG.info("Starting or resuming a tmux session into the container")
-        aliDock.waitSshUp()
-        aliDock.shell(cmdList=["-t", "tmux", "-u", "-CC", "new-session", "-A", "-s", "ad-tmux"])
+        aliDock.shell(cmd)
     elif args.action == "root":
         LOG.info("Starting a root shell into the container (use it at your own risk)")
         aliDock.rootShell()
@@ -169,7 +171,8 @@ def processStop(aliDock):
 
 def processActions(args):
     aliDock = AliDock()
-    if args.action in ["enter", "start", "root", "enter-tmux"]:
+
+    if args.action in ["enter", "start", "root"]:
         processEnterStart(aliDock, args)
     elif args.action == "status":
         processStatus(aliDock)
