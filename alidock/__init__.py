@@ -93,6 +93,14 @@ class AliDock(object):
                                     userId=userId))
         os.chmod(initShPath, 0o755)
 
+        # What to mount inside the container
+        mounts = [docker.types.Mount(self.dirInside,
+                                     self.dirOutside, type="bind")]
+
+        # Check if a CVMFS dir is available, and mount it in case
+        if os.path.isdir("/cvmfs"):
+            mounts.append(docker.types.Mount("/cvmfs", "/cvmfs", type="bind", read_only=True))
+
         # Start container with that script
         self.cli.containers.run(self.imageName,
                                 command=[os.path.join(self.dirInside, ".init.sh")],
@@ -100,8 +108,7 @@ class AliDock(object):
                                 auto_remove=True,
                                 cap_add=["SYS_PTRACE"],
                                 name=self.dockName,
-                                mounts=[docker.types.Mount(self.dirInside,
-                                                           self.dirOutside, type="bind")],
+                                mounts=mounts,
                                 ports={"22/tcp": None})  # None == random port
 
         return True
