@@ -3,7 +3,7 @@
 from __future__ import print_function
 from argparse import ArgumentParser
 from pwd import getpwuid
-from time import sleep
+import time
 import errno
 import os
 import os.path
@@ -11,8 +11,9 @@ import json
 import subprocess
 import docker
 import jinja2
+import requests
 from requests.exceptions import RequestException
-from pkg_resources import resource_string
+from pkg_resources import resource_string, parse_version, require
 from alidock.log import Log
 
 LOG = Log()
@@ -32,6 +33,8 @@ class AliDock(object):
         self.dirOutside = os.path.expanduser("~/alidock")
         self.dirInside = "/home/alidock"
         self.logRelative = ".init.log"
+        self.updatePeriod = 7200
+        self.checkForUpdates()
 
     def isRunning(self):
         try:
@@ -61,7 +64,7 @@ class AliDock(object):
                 subprocess.check_call(self.getSshCommand() + ["-T", "/bin/true"],
                                       stdout=nul, stderr=nul)
             except subprocess.CalledProcessError:
-                sleep(0.5)
+                time.sleep(0.5)
             else:
                 return True
         return False
@@ -111,6 +114,29 @@ class AliDock(object):
             self.cli.containers.get(self.dockName).remove(force=True)
         except docker.errors.NotFound:
             pass  # final state is fine, container is gone
+
+    def checkForUpdates(self):
+        timestampFile = os.path.join(self.dirOutside, ".lastupdate")
+        if not os.path.isfile(timestampFile):
+            open(timestampFile, 'a').close()
+        with open(timestampFile, "r+") as fil:
+            latestUpdate = fil.read()
+            now = int(time.time())
+            if not latestUpdate or now - int(latestUpdate) > self.updatePeriod:
+                url = "https://pypi.org/pypi/" + self.__module__ + "/json"
+                try:
+                    pypadata = requests.get(url)
+                    pypadata.raise_for_status()
+                    latestVersion = parse_version(pypadata.json()['info']['version'])
+                    localVersion = parse_version(require(self.__module__)[0].version)
+                    if latestVersion > localVersion:
+                        LOG.error("Update available and strongly recommended, UPDATE alidock!")
+                except requests.RequestException:
+                    LOG.warning("Couldn't check for new versions, continuing offline...")
+            fil.seek(0)
+            fil.write(str(now))
+            fil.truncate()
+            fil.close()
 
 def entrypoint():
     argp = ArgumentParser()
