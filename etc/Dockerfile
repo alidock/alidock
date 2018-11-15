@@ -1,6 +1,6 @@
 FROM alisw/slc7-builder
 RUN rpmdb --rebuilddb && yum clean all && rm -rf /var/cache/yum && \
-    yum -y install xcalc && \
+    yum -y install xcalc tmux && \
     yum clean all && rm -rf /var/cache/yum
 ADD sshd_config /etc/ssh/sshd_config
 RUN pip install alibuild==v1.5.4rc4
