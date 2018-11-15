@@ -3,24 +3,16 @@ language: python
 python:
   - "2.7"
   - "3.7-dev"
-#services:
-#  - docker
-#cache:
-#  directories:
-#    - $HOME/sw/TARS
 install: |
   set -e
   set -o pipefail
-  for PKG in pylint argparse requests PyYaml docker Jinja2; do
+  for PKG in pylint argparse requests PyYaml docker Jinja2 twine; do
     pip install "$PKG"
   done
 script: |
   set -e
   set -o pipefail
   ci/run-tests.sh
-#after_success:
-#  - bash <(curl -s https://codecov.io/bash)
-#env:
-#  global:
-#    - secure: "..."
-#    - NOKOGIRI_USE_SYSTEM_LIBRARIES=true  # speeds up installation of html-proofer
+env:
+  global:
+    secure: nZ5opXBQBj+/eOwvEqeGdqF2EY4hwlZRTrzAO6L0wUWWqHtQ4FitZLS6o//vlYDs019JzIH261t7q1dcQAkVG6smAmmJS6yZb+X53nBKBYMbpJvPkMjvTnuEE6o6+UWp04YDbGJwKWfXkVjQyUFb32YTiB9VKiQsvsJUjkgqNBKYniKNToj/8CvTa7qk/SbUSg54x35bxDBTPPBE1584JZB3FKnqOOfF7OZR4ffODbiyKAhYLZLrnJnianDYbXpqv5/t0CPYplHhmwMpK5OBeq0W4ZkeO4Q/AkdVnOqZuqDg4V7vtFPTg7ke9wPtspigq0M+b1IcGhzxxaIuAW/kpKip5wVa7ldebDl5wTCPyMLB4x10zihKUWxbv5+W+AfcabG+uDFBCkOJlmVWewXX/s959D6YpAhgYwlQGayi7BhbOpzj3pXe4MQCEwkQnE2CWzMzzz9T+pF+hUXkk5QdsurSEUjeIKd+EmWSH8Vfb1y8aZZo9cj7pShycO+H+vbv8vi+LsqRiDJ4bF7mmjBKLRN5nk9t/mOwq6hWtbUHUZQf6U+kzxrInTdsjmAB3Kg4CrNXE79Ot+DtUj8nt6FHL06CKah7/Nzd8MmmrhSW79aKaKw+fd1emcpWYmuuHhOdYKTBTrnL6B8ZyytuYK8j89vTN6wPp6t6dlYxV2hYmds=

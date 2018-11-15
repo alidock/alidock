@@ -12,7 +12,10 @@ except ImportError:
 
 setup(
   name='alidock',
-  version='0.0.1',
+
+  # LAST_TAG is a placeholder. Automatically replaced at deploy time with the right tag
+  version='LAST_TAG',
+
   description='Run your ALICE environment from a container easily',
   long_description=readme_to_rst(),
   url='https://github.com/dberzano/alidock',
