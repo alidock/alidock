@@ -3,9 +3,22 @@
 # Init script for alidock. Will run inside the container. Auto-generated.
 
 # Log into the shared directory to allow debug
-exec &> >(tee "{{sharedDir}}/.init.log")
+exec &> >(tee "{{sharedDir}}/{{logRelative}}")
 
 cd /
+
+# Change global prompt
+cat > /etc/profile.d/alidock.sh <<\EOF
+#!/bin/bash
+[[ $_ALIDOCK_ENV ]] && return 0;
+function _alidock_ps1() {
+  local RV=$?
+  [[ $RV != 0 ]] && echo -n "$RV|"
+}
+export -f _alidock_ps1
+export PS1='`_alidock_ps1`[alidock] \w \$> '
+export _ALIDOCK_ENV=1
+EOF
 
 # Create server's SSH key
 rm -f /etc/ssh/ssh_host_rsa_key
@@ -30,19 +43,6 @@ chown -R "{{userName}}" "{{sharedDir}}/.ssh"
 # Silence login messages ("Last login:...")
 touch "{{sharedDir}}/.hushlogin"
 chown "{{userName}}" "{{sharedDir}}/.hushlogin"
-
-# Change global prompt
-cat > /etc/profile.d/alidock.sh <<\EOF
-#!/bin/bash
-[[ $_ALIDOCK_ENV ]] && return 0;
-function _alidock_ps1() {
-  local RV=$?
-  [[ $RV != 0 ]] && echo -n "$RV|"
-}
-export -f _alidock_ps1
-export PS1='`_alidock_ps1`[alidock] \w \$> '
-export _ALIDOCK_ENV=1
-EOF
 
 # Create skeleton .bashrc/.bash_profile
 pushd "{{sharedDir}}"
