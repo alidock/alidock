@@ -41,6 +41,8 @@ class AliDock(object):
             "updatePeriod" : 43200
         }
         self.parseConfig()
+        self.conf["dockName"] = "{dockName}-{userId}".format(dockName=self.conf["dockName"],
+                                                             userId=os.getuid())
 
     def parseConfig(self):
         confFile = os.path.expanduser("~/.alidock-config.yaml")
@@ -68,8 +70,8 @@ class AliDock(object):
                                "check log file {outLog} for details. Error: {msg}"
                                .format(outLog=outLog, msg=exc))
         return ["ssh", "localhost", "-p", str(sshPort), "-Y", "-F/dev/null",
-                "-oForwardX11Trusted=no", "-oUserKnownHostsFile=/dev/null",
-                "-oStrictHostKeyChecking=no", "-oLogLevel=QUIET",
+                "-oForwardX11Trusted=no", "-oUserKnownHostsFile=/dev/null", "-oLogLevel=QUIET",
+                "-oStrictHostKeyChecking=no", "-oForwardX11Timeout=596h",
                 "-i", os.path.join(self.conf["dirOutside"], ".ssh", "id_rsa")]
 
     def waitSshUp(self):
@@ -193,9 +195,11 @@ def processEnterStart(aliDock, args):
         LOG.info("Creating container, hold on")
         aliDock.run()
     if args.action == "enter":
-        if args.tmux:
+        if args.tmux and os.environ.get("TMUX") is None:
             LOG.info("Resuming tmux session in the container")
             cmd = ["-t", "tmux", "-u", "-CC", "new-session", "-A", "-s", "ad-tmux"]
+        elif args.tmux:
+            raise AliDockError("already in a tmux session")
         else:
             LOG.info("Starting a shell into the container")
             cmd = []
@@ -219,6 +223,10 @@ def processStop(aliDock):
     aliDock.stop()
 
 def processActions(args):
+
+    if os.getuid() == 0:
+        raise AliDockError("refusing to execute as root: use an unprivileged user account")
+
     aliDock = AliDock()
 
     try:
