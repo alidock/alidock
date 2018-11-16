@@ -9,6 +9,8 @@ import os
 import os.path
 import json
 import subprocess
+import yaml
+from yaml import YAMLError
 import docker
 import jinja2
 import requests
@@ -27,38 +29,48 @@ class AliDockError(Exception):
 
 class AliDock(object):
 
-    # pylint: disable=too-many-instance-attributes
-
     def __init__(self):
         self.cli = docker.from_env()
-        self.dockName = "/alidock"
-        self.imageName = "alisw/alidock:latest"
-        self.dirOutside = os.path.expanduser("~/alidock")
-        self.dirInside = "/home/alidock"
-        self.logRelative = ".init.log"
         self.lastUpdRelative = ".alidock_last_updated"
-        self.updatePeriod = 43200  # 12h
+        self.dirInside = "/home/alidock"
+        self.logRelative = ".alidock.log"
+        self.conf = {
+            "dockName"     : "/alidock",
+            "imageName"    : "alisw/alidock:latest",
+            "dirOutside"   : "~/alidock",
+            "updatePeriod" : 43200
+        }
+        self.parseConfig()
+
+    def parseConfig(self):
+        confFile = os.path.expanduser("~/.alidock-config.yaml")
+        try:
+            confOverride = yaml.safe_load(open(confFile).read())
+            for k in self.conf:
+                self.conf[k] = confOverride.get(k, self.conf[k])
+        except (OSError, IOError, YAMLError, AttributeError):
+            pass
 
     def isRunning(self):
         try:
-            self.cli.containers.get(self.dockName)
+            self.cli.containers.get(self.conf["dockName"])
         except docker.errors.NotFound:
             return False
         return True
 
     def getSshCommand(self):
         try:
-            attrs = self.cli.containers.get(self.dockName).attrs
+            attrs = self.cli.containers.get(self.conf["dockName"]).attrs
             sshPort = attrs["NetworkSettings"]["Ports"]["22/tcp"][0]["HostPort"]
         except (docker.errors.NotFound, KeyError) as exc:
+            outLog = os.path.join(self.conf["dirOutside"], self.logRelative)
             raise AliDockError("cannot find container, maybe it did not start up properly: "
-                               "check log file {logOutside} for details. Error: {msg}"
-                               .format(logOutside=os.path.join(self.dirOutside, self.logRelative),
-                                       msg=exc))
+                               "check log file {outLog} for details. Error: {msg}"
+                               .format(outLog=outLog, msg=exc))
         return ["ssh", "localhost", "-p", str(sshPort), "-Y", "-F/dev/null",
                 "-oForwardX11Trusted=no", "-oUserKnownHostsFile=/dev/null",
                 "-oStrictHostKeyChecking=no", "-oLogLevel=QUIET",
-                "-i", os.path.join(self.dirOutside, ".ssh", "id_rsa")]
+                "-i", os.path.join(self.conf["dirOutside"], ".ssh", "id_rsa")]
 
     def waitSshUp(self):
         for _ in range(0, 40):
@@ -76,22 +88,23 @@ class AliDock(object):
         os.execvp("ssh", self.getSshCommand() + (cmd if cmd else []))
 
     def rootShell(self):
-        os.execvp("docker", ["docker", "exec", "-it", self.dockName, "/bin/bash"])
+        os.execvp("docker", ["docker", "exec", "-it", self.conf["dockName"], "/bin/bash"])
 
     def run(self):
         # Create directory to be shared with the container
+        outDir = os.path.expanduser(self.conf["dirOutside"])
         try:
-            os.mkdir(self.dirOutside)
+            os.mkdir(outDir)
         except OSError as exc:
-            if not os.path.isdir(self.dirOutside) or exc.errno != errno.EEXIST:
+            if not os.path.isdir(outDir) or exc.errno != errno.EEXIST:
                 raise AliDockError("cannot create directory {dir} to share with container, "
-                                   "check permissions".format(dir=self.dirOutside))
+                                   "check permissions".format(dir=self.conf["dirOutside"]))
 
         # Create initialisation script
         initSh = jinja2.Template(resource_string("alidock.helpers", "init.sh.j2"))
         userId = os.getuid()
         userName = getpwuid(userId).pw_name
-        initShPath = os.path.join(self.dirOutside, ".init.sh")
+        initShPath = os.path.join(outDir, ".alidock-init.sh")
         with open(initShPath, "w") as fil:
             fil.write(initSh.render(sharedDir=self.dirInside,
                                     logRelative=self.logRelative,
@@ -100,21 +113,21 @@ class AliDock(object):
         os.chmod(initShPath, 0o755)
 
         # Start container with that script
-        self.cli.containers.run(self.imageName,
-                                command=[os.path.join(self.dirInside, ".init.sh")],
+        self.cli.containers.run(self.conf["imageName"],
+                                command=[os.path.join(self.dirInside, ".alidock-init.sh")],
                                 detach=True,
                                 auto_remove=True,
                                 cap_add=["SYS_PTRACE"],
-                                name=self.dockName,
+                                name=self.conf["dockName"],
                                 mounts=[docker.types.Mount(self.dirInside,
-                                                           self.dirOutside, type="bind")],
+                                                           outDir, type="bind")],
                                 ports={"22/tcp": None})  # None == random port
 
         return True
 
     def stop(self):
         try:
-            self.cli.containers.get(self.dockName).remove(force=True)
+            self.cli.containers.get(self.conf["dockName"]).remove(force=True)
         except docker.errors.NotFound:
             pass  # final state is fine, container is gone
 
@@ -123,7 +136,7 @@ class AliDock(object):
             # Local development or installed from Git
             return False
 
-        tsFn = os.path.join(self.dirOutside, self.lastUpdRelative)
+        tsFn = os.path.join(self.conf["dirOutside"], self.lastUpdRelative)
         try:
             with open(tsFn) as fil:
                 lastUpdate = int(fil.read())
@@ -131,7 +144,7 @@ class AliDock(object):
             lastUpdate = 0
 
         now = int(time())
-        if now - lastUpdate > self.updatePeriod:
+        if now - lastUpdate > int(self.conf["updatePeriod"]):
             try:
                 pypaData = requests.get("https://pypi.org/pypi/{pkg}/json".format(pkg=__package__),
                                         timeout=5)
