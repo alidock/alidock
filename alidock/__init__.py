@@ -99,7 +99,8 @@ class AliDock(object):
 
         # Check if a CVMFS dir is available, and mount it in case
         if os.path.isdir("/cvmfs"):
-            mounts.append(docker.types.Mount("/cvmfs", "/cvmfs", type="bind", read_only=True))
+            mounts.append(docker.types.Mount("/cvmfs", "/cvmfs", type="bind",
+                                             read_only=True, propagation="shared"))
 
         # Start container with that script
         self.cli.containers.run(self.imageName,
