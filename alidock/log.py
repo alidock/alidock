@@ -2,6 +2,7 @@ import sys
 
 class Log(object):
     green = "32"
+    yellow = "33"
     red = "31"
 
     def __init__(self):
@@ -18,6 +19,9 @@ class Log(object):
 
     def info(self, msg):
         self.printColor(self.green, msg)
+
+    def warning(self, msg):
+        self.printColor(self.yellow, msg)
 
     def error(self, msg):
         self.printColor(self.red, msg)

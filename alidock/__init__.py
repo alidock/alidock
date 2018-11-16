@@ -3,7 +3,7 @@
 from __future__ import print_function
 from argparse import ArgumentParser
 from pwd import getpwuid
-from time import sleep
+from time import time, sleep
 import errno
 import os
 import os.path
@@ -11,8 +11,9 @@ import json
 import subprocess
 import docker
 import jinja2
+import requests
 from requests.exceptions import RequestException
-from pkg_resources import resource_string
+from pkg_resources import resource_string, parse_version, require
 from alidock.log import Log
 
 LOG = Log()
@@ -25,13 +26,18 @@ class AliDockError(Exception):
         return self.msg
 
 class AliDock(object):
+
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(self):
         self.cli = docker.from_env()
         self.dockName = "/alidock"
-        self.imageName = "alidock"
+        self.imageName = "alisw/alidock:latest"
         self.dirOutside = os.path.expanduser("~/alidock")
         self.dirInside = "/home/alidock"
         self.logRelative = ".init.log"
+        self.lastUpdRelative = ".alidock_last_updated"
+        self.updatePeriod = 43200  # 12h
 
     def isRunning(self):
         try:
@@ -112,6 +118,36 @@ class AliDock(object):
         except docker.errors.NotFound:
             pass  # final state is fine, container is gone
 
+    def hasUpdates(self):
+        if str(require(__package__)[0].version) == "LAST-TAG":
+            # Local development or installed from Git
+            return False
+
+        tsFn = os.path.join(self.dirOutside, self.lastUpdRelative)
+        try:
+            with open(tsFn) as fil:
+                lastUpdate = int(fil.read())
+        except (IOError, OSError, ValueError):
+            lastUpdate = 0
+
+        now = int(time())
+        if now - lastUpdate > self.updatePeriod:
+            try:
+                pypaData = requests.get("https://pypi.org/pypi/{pkg}/json".format(pkg=__package__),
+                                        timeout=5)
+                pypaData.raise_for_status()
+                availVersion = parse_version(pypaData.json()["info"]["version"])
+                localVersion = parse_version(require(__package__)[0].version)
+                if availVersion > localVersion:
+                    return True
+            except (requests.RequestException, ValueError) as exc:
+                raise AliDockError(str(exc))
+
+            with open(tsFn, "w") as fil:
+                fil.write(str(now))
+
+        return False
+
 def entrypoint():
     argp = ArgumentParser()
     argp.add_argument("--quiet", dest="quiet", default=False, action="store_true",
@@ -171,6 +207,14 @@ def processStop(aliDock):
 
 def processActions(args):
     aliDock = AliDock()
+
+    try:
+        if aliDock.hasUpdates():
+            LOG.error("You are using an obsolete version of alidock.")
+            LOG.error("Upgrade NOW with:")
+            LOG.error("    pip install alidock --upgrade")
+    except AliDockError:
+        LOG.warning("Cannot check for updates this time")
 
     if args.action in ["enter", "start", "root"]:
         processEnterStart(aliDock, args)
