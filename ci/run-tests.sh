@@ -1,14 +1,37 @@
 #!/bin/bash -ex
 cd "$(dirname "$0")"/..
 
-# What tests to run based on what changed (on Travis)
-if [[ $TRAVIS_COMMIT_RANGE ]]; then
+if [[ $TRAVIS_PULL_REQUEST != false && $TRAVIS_COMMIT_RANGE ]]; then
+  # We are testing a Pull Request
   RUN_SETUP=1
+  [[ $TRAVIS_PYTHON_VERSION == 3* ]] && RUN_DOCK=1 || RUN_DOCK=
   git diff --name-only $TRAVIS_COMMIT_RANGE | grep -q ^setup.py$ || RUN_SETUP=
+  git diff --name-only $TRAVIS_COMMIT_RANGE | grep -q ^dock/     || RUN_DOCK=
+  DOCKER_REPO=aliswdev
+elif [[ $TRAVIS_PULL_REQUEST == false && $TRAVIS_BRANCH == master ]]; then
+  # We are testing the master branch. Get list of changed files for the topmost commit and trust it:
+  # we should have squashed the Pull Requests, so it should be fine
+  [[ $TRAVIS_PYTHON_VERSION == 3* ]] && RUN_DOCK=1 || RUN_DOCK=
+  if [[ $TRAVIS_EVENT_TYPE != cron ]]; then
+    # Build if needed on merge; build always on cron (to get possible changes of the FROM container)
+    git diff-tree --no-commit-id --name-only -r HEAD | grep -q ^dock/ || RUN_DOCK=
+  fi
+  DOCKER_REPO=alisw
 fi
 
 # Pylint
 find . -name '*.py' -a -not -name 'setup.py' | xargs pylint
+
+# Docker
+if [[ $RUN_DOCK ]]; then
+  docker login -u "$DOCKER_USER" -p "$DOCKER_PASS"
+  pushd dock
+    docker build . -t "$DOCKER_REPO"/alidock:latest
+    docker tag "$DOCKER_REPO"/alidock:latest "$DOCKER_REPO"/alidock:cc7
+  popd
+  docker push "$DOCKER_REPO"/alidock:latest
+  docker push "$DOCKER_REPO"/alidock:cc7
+fi
 
 # Deployment/test sdist creation
 if [[ $TRAVIS_PYTHON_VERSION == 3* && $TRAVIS_TAG && $TRAVIS_PULL_REQUEST == false ]]; then

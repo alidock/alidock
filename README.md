@@ -3,6 +3,7 @@ alidock
 
 [![Build Status](https://travis-ci.com/dberzano/alidock.svg?branch=master)](https://travis-ci.com/dberzano/alidock)
 [![PyPI version](https://badge.fury.io/py/alidock.svg)](https://badge.fury.io/py/alidock)
+[![Docker pulls](https://img.shields.io/docker/pulls/alisw/alidock.svg?logo=docker&label=pulls)](https://hub.docker.com/r/alisw/alidock)
 
 Run your ALICE environment from a container. Install [Docker](https://docs.docker.com/install/),
 then:
