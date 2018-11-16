@@ -6,8 +6,8 @@ from glob import glob
 setup(
   name='alidock',
 
-  # LAST_TAG is a placeholder. Automatically replaced at deploy time with the right tag
-  version='LAST_TAG',
+  # LAST-TAG is a placeholder. Automatically replaced at deploy time with the right tag
+  version='LAST-TAG',
 
   description='Run your ALICE environment from a container easily',
 

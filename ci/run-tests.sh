@@ -36,7 +36,7 @@ fi
 # Deployment/test sdist creation
 if [[ $TRAVIS_PYTHON_VERSION == 3* && $TRAVIS_TAG && $TRAVIS_PULL_REQUEST == false ]]; then
   # Deploy if this is a tag (do it only for one Python version, not all matrix tests)
-  sed -i.deleteme -e "s/LAST_TAG/${TRAVIS_TAG}/g" setup.py
+  sed -i.deleteme -e "s/LAST-TAG/${TRAVIS_TAG}/g" setup.py
   rm -f *.deleteme
   git clean -fxd
   git diff
