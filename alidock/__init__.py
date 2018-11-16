@@ -193,9 +193,11 @@ def processEnterStart(aliDock, args):
         LOG.info("Creating container, hold on")
         aliDock.run()
     if args.action == "enter":
-        if args.tmux:
+        if args.tmux and os.environ.get("TMUX") is None:
             LOG.info("Resuming tmux session in the container")
             cmd = ["-t", "tmux", "-u", "-CC", "new-session", "-A", "-s", "ad-tmux"]
+        elif args.tmux:
+            raise AliDockError("already in a tmux session")
         else:
             LOG.info("Starting a shell into the container")
             cmd = []
