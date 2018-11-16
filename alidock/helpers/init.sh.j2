@@ -20,6 +20,9 @@ export PS1='`_alidock_ps1`[{{dockName}}] \w \$> '
 export _ALIDOCK_ENV=1
 EOF
 
+# Make tab completions case insensitive
+echo 'set completion-ignore-case on' >> /etc/inputrc
+
 # Create server's SSH key
 rm -f /etc/ssh/ssh_host_rsa_key
 ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -N ''
