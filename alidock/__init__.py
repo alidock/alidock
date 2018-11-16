@@ -41,6 +41,8 @@ class AliDock(object):
             "updatePeriod" : 43200
         }
         self.parseConfig()
+        self.conf["dockName"] = "{dockName}-{userId}".format(dockName=self.conf["dockName"],
+                                                             userId=os.getuid())
 
     def parseConfig(self):
         confFile = os.path.expanduser("~/.alidock-config.yaml")
