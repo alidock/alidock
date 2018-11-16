@@ -221,6 +221,10 @@ def processStop(aliDock):
     aliDock.stop()
 
 def processActions(args):
+
+    if os.getuid() == 0:
+        raise AliDockError("refusing to execute as root: use an unprivileged user account")
+
     aliDock = AliDock()
 
     try:
