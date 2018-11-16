@@ -70,8 +70,8 @@ class AliDock(object):
                                "check log file {outLog} for details. Error: {msg}"
                                .format(outLog=outLog, msg=exc))
         return ["ssh", "localhost", "-p", str(sshPort), "-Y", "-F/dev/null",
-                "-oForwardX11Trusted=no", "-oUserKnownHostsFile=/dev/null",
-                "-oStrictHostKeyChecking=no", "-oLogLevel=QUIET",
+                "-oForwardX11Trusted=no", "-oUserKnownHostsFile=/dev/null", "-oLogLevel=QUIET",
+                "-oStrictHostKeyChecking=no", "-oForwardX11Timeout=596h",
                 "-i", os.path.join(self.conf["dirOutside"], ".ssh", "id_rsa")]
 
     def waitSshUp(self):
