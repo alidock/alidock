@@ -29,30 +29,27 @@ class AliDockError(Exception):
 
 class AliDock(object):
 
-    # pylint: disable=too-many-instance-attributes
-
     def __init__(self):
         self.cli = docker.from_env()
         self.lastUpdRelative = ".alidock_last_updated"
-        self.updatePeriod = 43200  # 12h
+        self.dirInside = "/home/alidock"
+        self.logRelative = ".alidock.log"
         self.conf = {
-            "dockName"    : "/alidock",
+            "dockName"     : "/alidock",
             "imageName"    : "alisw/alidock:latest",
-            "dirOutside"  : os.path.expanduser("~/alidock"),
-            "dirInside"   : "/home/alidock",
-            "logRelative" : ".init.log"
+            "dirOutside"   : "~/alidock",
+            "updatePeriod" : 43200
         }
         self.parseConfig()
 
     def parseConfig(self):
-        confFile = self.conf["dirOutside"] + "/.alidock-config.yaml"
-        if os.path.isfile(confFile):
-            try:
-                confOverride = yaml.safe_load(open(confFile).read())
-                for k in self.conf:
-                    self.conf[k] = confOverride.get(k, self.conf[k])
-            except (IOError, YAMLError, AttributeError):
-                LOG.error("Configuration file {0} either unreadable or malformed.".format(confFile))
+        confFile = os.path.expanduser("~/.alidock-config.yaml")
+        try:
+            confOverride = yaml.safe_load(open(confFile).read())
+            for k in self.conf:
+                self.conf[k] = confOverride.get(k, self.conf[k])
+        except (OSError, IOError, YAMLError, AttributeError):
+            pass
 
     def isRunning(self):
         try:
@@ -66,11 +63,10 @@ class AliDock(object):
             attrs = self.cli.containers.get(self.conf["dockName"]).attrs
             sshPort = attrs["NetworkSettings"]["Ports"]["22/tcp"][0]["HostPort"]
         except (docker.errors.NotFound, KeyError) as exc:
+            outLog = os.path.join(self.conf["dirOutside"], self.logRelative)
             raise AliDockError("cannot find container, maybe it did not start up properly: "
-                               "check log file {logOutside} for details. Error: {msg}"
-                               .format(logOutside=os.path.join(self.conf["dirOutside"],
-                                                               self.conf["logRelative"]),
-                                       msg=exc))
+                               "check log file {outLog} for details. Error: {msg}"
+                               .format(outLog=outLog, msg=exc))
         return ["ssh", "localhost", "-p", str(sshPort), "-Y", "-F/dev/null",
                 "-oForwardX11Trusted=no", "-oUserKnownHostsFile=/dev/null",
                 "-oStrictHostKeyChecking=no", "-oLogLevel=QUIET",
@@ -96,10 +92,11 @@ class AliDock(object):
 
     def run(self):
         # Create directory to be shared with the container
+        outDir = os.path.expanduser(self.conf["dirOutside"])
         try:
-            os.mkdir(self.conf["dirOutside"])
+            os.mkdir(outDir)
         except OSError as exc:
-            if not os.path.isdir(self.conf["dirOutside"]) or exc.errno != errno.EEXIST:
+            if not os.path.isdir(outDir) or exc.errno != errno.EEXIST:
                 raise AliDockError("cannot create directory {dir} to share with container, "
                                    "check permissions".format(dir=self.conf["dirOutside"]))
 
@@ -107,23 +104,23 @@ class AliDock(object):
         initSh = jinja2.Template(resource_string("alidock.helpers", "init.sh.j2"))
         userId = os.getuid()
         userName = getpwuid(userId).pw_name
-        initShPath = os.path.join(self.conf["dirOutside"], ".init.sh")
+        initShPath = os.path.join(outDir, ".alidock-init.sh")
         with open(initShPath, "w") as fil:
-            fil.write(initSh.render(sharedDir=self.conf["dirInside"],
-                                    logRelative=self.conf["logRelative"],
+            fil.write(initSh.render(sharedDir=self.dirInside,
+                                    logRelative=self.logRelative,
                                     userName=userName,
                                     userId=userId))
         os.chmod(initShPath, 0o755)
 
         # Start container with that script
         self.cli.containers.run(self.conf["imageName"],
-                                command=[os.path.join(self.conf["dirInside"], ".init.sh")],
+                                command=[os.path.join(self.dirInside, ".alidock-init.sh")],
                                 detach=True,
                                 auto_remove=True,
                                 cap_add=["SYS_PTRACE"],
                                 name=self.conf["dockName"],
-                                mounts=[docker.types.Mount(self.conf["dirInside"],
-                                                           self.conf["dirOutside"], type="bind")],
+                                mounts=[docker.types.Mount(self.dirInside,
+                                                           outDir, type="bind")],
                                 ports={"22/tcp": None})  # None == random port
 
         return True
@@ -139,7 +136,7 @@ class AliDock(object):
             # Local development or installed from Git
             return False
 
-        tsFn = os.path.join(self.dirOutside, self.lastUpdRelative)
+        tsFn = os.path.join(self.conf["dirOutside"], self.lastUpdRelative)
         try:
             with open(tsFn) as fil:
                 lastUpdate = int(fil.read())
@@ -147,7 +144,7 @@ class AliDock(object):
             lastUpdate = 0
 
         now = int(time())
-        if now - lastUpdate > self.updatePeriod:
+        if now - lastUpdate > int(self.conf["updatePeriod"]):
             try:
                 pypaData = requests.get("https://pypi.org/pypi/{pkg}/json".format(pkg=__package__),
                                         timeout=5)
