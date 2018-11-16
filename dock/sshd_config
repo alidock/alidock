@@ -37,8 +37,8 @@ AuthorizedKeysFile	.ssh/authorized_keys
 
 # To disable tunneled clear text passwords, change to no here!
 #PasswordAuthentication yes
-#PermitEmptyPasswords no
-PasswordAuthentication yes
+PermitEmptyPasswords no
+PasswordAuthentication no
 
 # Change to no to disable s/key passwords
 #ChallengeResponseAuthentication yes
@@ -52,7 +52,7 @@ ChallengeResponseAuthentication no
 #KerberosUseKuserok yes
 
 # GSSAPI options
-GSSAPIAuthentication yes
+GSSAPIAuthentication no
 GSSAPICleanupCredentials no
 #GSSAPIStrictAcceptorCheck yes
 #GSSAPIKeyExchange no
@@ -71,13 +71,12 @@ GSSAPICleanupCredentials no
 # problems.
 UsePAM yes
 
-#AllowAgentForwarding yes
-#AllowTcpForwarding yes
+AllowAgentForwarding no
+AllowTcpForwarding no
 #GatewayPorts no
 X11Forwarding yes
 X11UseLocalhost no
 #X11DisplayOffset 10
-#X11UseLocalhost yes
 #PermitTTY yes
 #PrintMotd yes
 #PrintLastLog yes
@@ -85,14 +84,14 @@ X11UseLocalhost no
 #UseLogin no
 #UsePrivilegeSeparation sandbox
 #PermitUserEnvironment no
-#Compression delayed
+Compression no
 #ClientAliveInterval 0
 #ClientAliveCountMax 3
 #ShowPatchLevel no
-#UseDNS yes
+UseDNS no
 #PidFile /var/run/sshd.pid
 #MaxStartups 10:30:100
-#PermitTunnel no
+PermitTunnel no
 #ChrootDirectory none
 #VersionAddendum none
 
@@ -104,13 +103,3 @@ AcceptEnv LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES
 AcceptEnv LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT
 AcceptEnv LC_IDENTIFICATION LC_ALL LANGUAGE
 AcceptEnv XMODIFIERS
-
-# override default of no subsystems
-Subsystem	sftp	/usr/libexec/openssh/sftp-server
-
-# Example of overriding settings on a per-user basis
-#Match User anoncvs
-#	X11Forwarding no
-#	AllowTcpForwarding no
-#	PermitTTY no
-#	ForceCommand cvs server
