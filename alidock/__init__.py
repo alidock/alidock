@@ -125,7 +125,7 @@ class AliDock(object):
             if not latestUpdate or now - int(latestUpdate) > self.updatePeriod:
                 url = "https://pypi.org/pypi/" + self.__module__ + "/json"
                 try:
-                    pypadata = requests.get(url)
+                    pypadata = requests.get(url, timeout=5)
                     pypadata.raise_for_status()
                     latestVersion = parse_version(pypadata.json()['info']['version'])
                     localVersion = parse_version(require(self.__module__)[0].version)
