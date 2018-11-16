@@ -16,7 +16,7 @@ function _alidock_ps1() {
   [[ $RV != 0 ]] && echo -n "$RV|"
 }
 export -f _alidock_ps1
-export PS1='`_alidock_ps1`[alidock] \w \$> '
+export PS1='`_alidock_ps1`[{{dockName}}] \w \$> '
 export _ALIDOCK_ENV=1
 EOF
 

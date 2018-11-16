@@ -29,18 +29,19 @@ class AliDockError(Exception):
 
 class AliDock(object):
 
-    def __init__(self):
+    def __init__(self, overrideConf=None):
         self.cli = docker.from_env()
         self.lastUpdRelative = ".alidock_last_updated"
         self.dirInside = "/home/alidock"
         self.logRelative = ".alidock.log"
         self.conf = {
-            "dockName"     : "/alidock",
+            "dockName"     : "alidock",
             "imageName"    : "alisw/alidock:latest",
             "dirOutside"   : "~/alidock",
             "updatePeriod" : 43200
         }
         self.parseConfig()
+        self.overrideConfig(overrideConf)
         self.conf["dockName"] = "{dockName}-{userId}".format(dockName=self.conf["dockName"],
                                                              userId=os.getuid())
 
@@ -52,6 +53,13 @@ class AliDock(object):
                 self.conf[k] = confOverride.get(k, self.conf[k])
         except (OSError, IOError, YAMLError, AttributeError):
             pass
+
+    def overrideConfig(self, override):
+        if not override:
+            return
+        for k in self.conf:
+            if not override.get(k) is None:
+                self.conf[k] = override[k]
 
     def isRunning(self):
         try:
@@ -108,8 +116,9 @@ class AliDock(object):
         userName = getpwuid(userId).pw_name
         initShPath = os.path.join(outDir, ".alidock-init.sh")
         with open(initShPath, "w") as fil:
-            fil.write(initSh.render(sharedDir=self.dirInside,
-                                    logRelative=self.logRelative,
+            fil.write(initSh.render(logRelative=self.logRelative,
+                                    sharedDir=self.dirInside,
+                                    dockName=self.conf["dockName"].rsplit("-", 1)[0],
                                     userName=userName,
                                     userId=userId))
         os.chmod(initShPath, 0o755)
@@ -169,6 +178,17 @@ def entrypoint():
                       help="Do not print any message")
     argp.add_argument("--tmux", dest="tmux", default=False, action="store_true",
                       help="Start or resume a detachable tmux session")
+
+    # The following switches can be set in a configuration file
+    argp.add_argument("--name", dest="dockName", default=None,
+                      help="Override default container name [dockName]")
+    argp.add_argument("--image", dest="imageName", default=None,
+                      help="Override default image name [imageName]")
+    argp.add_argument("--shared", dest="dirOutside", default=None,
+                      help="Override host path of persistent home [dirOutside]")
+    argp.add_argument("--update-period", dest="updatePeriod", default=None,
+                      help="Override update check period [updatePeriod]")
+
     argp.add_argument("action", default="enter", nargs="?",
                       choices=["enter", "root", "start", "status", "stop"],
                       help="What to do")
@@ -227,7 +247,7 @@ def processActions(args):
     if os.getuid() == 0:
         raise AliDockError("refusing to execute as root: use an unprivileged user account")
 
-    aliDock = AliDock()
+    aliDock = AliDock(args.__dict__)
 
     try:
         if aliDock.hasUpdates():
