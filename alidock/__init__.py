@@ -1,6 +1,7 @@
 """alidock module"""
 
 from __future__ import print_function
+import argparse
 from argparse import ArgumentParser
 from pwd import getpwuid
 from time import time, sleep
@@ -190,8 +191,12 @@ def entrypoint():
                       help="Override update check period [updatePeriod]")
 
     argp.add_argument("action", default="enter", nargs="?",
-                      choices=["enter", "root", "start", "status", "stop"],
+                      choices=["enter", "root", "exec", "start", "status", "stop"],
                       help="What to do")
+
+    argp.add_argument("shellCmd", nargs=argparse.REMAINDER,
+                      help="Command to execute in the container (works with exec)")
+
     args = argp.parse_args()
 
     LOG.setQuiet(args.quiet)
@@ -225,6 +230,10 @@ def processEnterStart(aliDock, args):
             cmd = []
         aliDock.waitSshUp()
         aliDock.shell(cmd)
+    elif args.action == "exec":
+        LOG.info("Executing command in the container")
+        aliDock.waitSshUp()
+        aliDock.shell(["-t"] + args.shellCmd)
     elif args.action == "root":
         LOG.info("Starting a root shell into the container (use it at your own risk)")
         aliDock.rootShell()
@@ -257,7 +266,7 @@ def processActions(args):
     except AliDockError:
         LOG.warning("Cannot check for updates this time")
 
-    if args.action in ["enter", "start", "root"]:
+    if args.action in ["enter", "exec", "root", "start"]:
         processEnterStart(aliDock, args)
     elif args.action == "status":
         processStatus(aliDock)
