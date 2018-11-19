@@ -177,20 +177,15 @@ class AliDock(object):
 
         return False
 
-    def hasCliUpdates(self):
+    def hasClientUpdates(self):
+        """Check for client updates (alidock) without performing them. Returns True if updates are
+           found, false otherwise."""
+
         if str(require(__package__)[0].version) == "LAST-TAG":
-            # Local development or installed from Git
+            # No check for local development or version from VCS
             return False
 
-        tsFn = os.path.join(self.conf["dirOutside"], self.lastUpdRelative)
-        try:
-            with open(tsFn) as fil:
-                lastUpdate = int(fil.read())
-        except (IOError, OSError, ValueError):
-            lastUpdate = 0
-
-        now = int(time())
-        if now - lastUpdate > int(self.conf["updatePeriod"]):
+        def updateFunc():
             try:
                 pypaData = requests.get("https://pypi.org/pypi/{pkg}/json".format(pkg=__package__),
                                         timeout=5)
@@ -201,11 +196,12 @@ class AliDock(object):
                     return True
             except (requests.RequestException, ValueError) as exc:
                 raise AliDockError(str(exc))
+            return False
 
-            with open(tsFn, "w") as fil:
-                fil.write(str(now))
-
-        return False
+        return self.hasUpdates(stateFileRelative=self.lastUpdRelative,
+                               updatePeriod=self.conf["updatePeriod"],
+                               nagOnUpdate=True,
+                               updateFunc=updateFunc)
 
     def hasImgUpdates(self):
         tsFn = os.path.join(self.conf["dirOutside"], self.lastUpdRelative)
@@ -326,7 +322,7 @@ def processActions(args):
     aliDock = AliDock(args.__dict__)
 
     try:
-        if aliDock.hasCliUpdates():
+        if aliDock.hasClientUpdates():
             LOG.error("You are using an obsolete version of alidock.")
             LOG.error("Upgrade NOW with:")
             LOG.error("    pip install alidock --upgrade")
