@@ -177,10 +177,14 @@ def entrypoint():
     argp = ArgumentParser()
     argp.add_argument("--quiet", dest="quiet", default=False, action="store_true",
                       help="Do not print any message")
-    argp.add_argument("--tmux", dest="tmux", default=False, action="store_true",
-                      help="Start or resume a detachable tmux session")
-    argp.add_argument("--tmux-control", dest="tmuxControl", default=False, action="store_true",
-                      help="Start or resume a detachable tmux session in control mode")
+
+    # tmux: both normal and terminal integration ("control mode")
+    tmuxArgs = argp.add_mutually_exclusive_group()
+    tmuxArgs.add_argument("--tmux", dest="tmux", default=False, action="store_true",
+                          help="Start or resume a detachable tmux session")
+    tmuxArgs.add_argument("--tmux-control", dest="tmuxControl", default=False, action="store_true",
+                          help="Start or resume a detachable tmux session in control mode "
+                               "(integration with your terminal)")
 
     # The following switches can be set in a configuration file
     argp.add_argument("--name", dest="dockName", default=None,
