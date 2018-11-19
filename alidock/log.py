@@ -4,6 +4,7 @@ class Log(object):
     green = "32"
     yellow = "33"
     red = "31"
+    magenta = "35"
 
     def __init__(self):
         self.quiet = False
@@ -16,6 +17,9 @@ class Log(object):
             return
         sys.stderr.write("\033[" + colEsc + "m" + msg + "\033[m\n")
         sys.stderr.flush()
+
+    def debug(self, msg):
+        self.printColor(self.magenta, msg)
 
     def info(self, msg):
         self.printColor(self.green, msg)
