@@ -32,15 +32,14 @@ class AliDock(object):
 
     def __init__(self, overrideConf=None):
         self.cli = docker.from_env()
-        self.lastUpdRelative = ".alidock_last_updated"
         self.dirInside = "/home/alidock"
         self.logRelative = ".alidock.log"
         self.conf = {
-            "dockName"         : "alidock",
-            "imageName"        : "alisw/alidock:latest",
-            "dirOutside"       : "~/alidock",
-            "updatePeriod"     : 43200,
-            "ignoreImgUpdates" : False
+            "dockName"        : "alidock",
+            "imageName"       : "alisw/alidock:latest",
+            "dirOutside"      : "~/alidock",
+            "updatePeriod"    : 43200,
+            "dontUpdateImage" : False
         }
         self.parseConfig()
         self.overrideConfig(overrideConf)
@@ -198,29 +197,30 @@ class AliDock(object):
                 raise AliDockError(str(exc))
             return False
 
-        return self.hasUpdates(stateFileRelative=self.lastUpdRelative,
+        return self.hasUpdates(stateFileRelative=".alidock_pip_check",
                                updatePeriod=self.conf["updatePeriod"],
                                nagOnUpdate=True,
                                updateFunc=updateFunc)
 
-    def hasImgUpdates(self):
-        tsFn = os.path.join(self.conf["dirOutside"], self.lastUpdRelative)
-        try:
-            with open(tsFn) as fil:
-                lastUpdate = int(fil.read())
-        except (IOError, OSError, ValueError):
-            lastUpdate = 0
-        now = int(time())
-        if self.conf["imageName"] != "alisw/alidock:latest" or self.conf["ignoreImgUpdates"]:
-            # Either not using the default image or don't want to update
+    def hasImageUpdates(self):
+        """Check for image updates without performing them. Returns True if updates are found, false
+           otherwise."""
+
+        if self.conf["dontUpdateImage"]:
             return False
-        if now - lastUpdate > int(self.conf["updatePeriod"]):
-            rmtDgst = self.cli.images.get_registry_data(
+
+        def updateFunc():
+            availHash = self.cli.images.get_registry_data(
                 self.conf["imageName"]).attrs["Descriptor"]["digest"]
-            lclDgst = self.cli.images.get(
+            localHash = self.cli.images.get(
                 self.conf["imageName"]).attrs["RepoDigests"][0].split("@")[1]
-            return False if rmtDgst == lclDgst else True
-        return False
+            LOG.debug("local: {loc}, remote: {remo}".format(loc=localHash, remo=availHash))
+            return availHash != localHash
+
+        return self.hasUpdates(stateFileRelative=".alidock_docker_check",
+                               updatePeriod=self.conf["updatePeriod"],
+                               nagOnUpdate=False,
+                               updateFunc=updateFunc)
 
 def entrypoint():
     argp = ArgumentParser()
@@ -244,9 +244,9 @@ def entrypoint():
                       help="Override host path of persistent home [dirOutside]")
     argp.add_argument("--update-period", dest="updatePeriod", default=None,
                       help="Override update check period [updatePeriod]")
-    argp.add_argument("--ignore-updates", dest="ignoreImgUpdates", default=False,
+    argp.add_argument("--no-update-image", dest="dontUpdateImage", default=False,
                       action="store_true",
-                      help="Ignore check for image updates [ignoreImgUpdates]")
+                      help="Do not update the Docker image [dontUpdateImage]")
 
     argp.add_argument("action", default="enter", nargs="?",
                       choices=["enter", "root", "exec", "start", "status", "stop"],
@@ -272,12 +272,14 @@ def entrypoint():
         exit(12)
 
 def processEnterStart(aliDock, args):
-    if aliDock.hasImgUpdates():
-        LOG.info("Pulling latest container image...")
-        aliDock.pull()
     created = False
     if not aliDock.isRunning():
         created = True
+
+        if aliDock.hasImageUpdates():
+            LOG.info("Updating container")
+            aliDock.pull()
+
         LOG.info("Creating container, hold on")
         aliDock.run()
     if args.action == "enter":
