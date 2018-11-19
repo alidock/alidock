@@ -203,7 +203,7 @@ class AliDock(object):
                                updateFunc=updateFunc)
 
     def hasImageUpdates(self):
-        """Check for image updates without performing them. Returns True if updates are found, false
+        """Check for image updates without performing them. Returns True if updates are found, False
            otherwise."""
 
         if self.conf["dontUpdateImage"]:
@@ -278,9 +278,12 @@ def processEnterStart(aliDock, args):
     if not aliDock.isRunning():
         created = True
 
-        if aliDock.hasImageUpdates():
-            LOG.info("Updating container")
-            aliDock.pull()
+        try:
+            if aliDock.hasImageUpdates():
+                LOG.info("Updating container")
+                aliDock.pull()
+        except AliDockError as exc:
+            LOG.warning("Cannot update container image this time")
 
         LOG.info("Creating container, hold on")
         aliDock.run()
