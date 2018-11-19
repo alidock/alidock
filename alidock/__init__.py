@@ -179,6 +179,8 @@ def entrypoint():
                       help="Do not print any message")
     argp.add_argument("--tmux", dest="tmux", default=False, action="store_true",
                       help="Start or resume a detachable tmux session")
+    argp.add_argument("--tmux-control", dest="tmuxControl", default=False, action="store_true",
+                      help="Start or resume a detachable tmux session in control mode")
 
     # The following switches can be set in a configuration file
     argp.add_argument("--name", dest="dockName", default=None,
@@ -220,10 +222,12 @@ def processEnterStart(aliDock, args):
         LOG.info("Creating container, hold on")
         aliDock.run()
     if args.action == "enter":
-        if args.tmux and os.environ.get("TMUX") is None:
+        if (args.tmux or args.tmuxControl) and os.environ.get("TMUX") is None:
             LOG.info("Resuming tmux session in the container")
             cmd = ["-t", "tmux", "-u", "-CC", "new-session", "-A", "-s", "ad-tmux"]
-        elif args.tmux:
+            if args.tmux:
+                cmd.remove("-CC")
+        elif args.tmux or args.tmuxControl:
             raise AliDockError("already in a tmux session")
         else:
             LOG.info("Starting a shell into the container")
