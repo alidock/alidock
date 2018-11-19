@@ -150,6 +150,33 @@ class AliDock(object):
         except docker.errors.APIError as exc:
             raise AliDockError(str(exc))
 
+    def hasUpdates(self, stateFileRelative, updatePeriod, nagOnUpdate, updateFunc):
+        """Generic function that checks for updates every updatePeriod seconds, saving the state
+           on stateFileRelative (relative to the container's home directory). It returns True in
+           case there is an update, False in case there is none. A custom function updateFunc is
+           ran to determine whether to update. Set nagOnUpdate to True if, upon an update, the
+           state file should not be updated in order to trigger another check at the next run (this
+           nags users until they update)."""
+
+        tsFn = os.path.join(os.path.expanduser(self.conf["dirOutside"]), stateFileRelative)
+        try:
+            with open(tsFn) as fil:
+                lastUpdate = int(fil.read())
+        except (IOError, OSError, ValueError):
+            lastUpdate = 0
+
+        now = int(time())
+        if now - lastUpdate > int(updatePeriod):
+            if updateFunc() is True:
+                if nagOnUpdate:
+                    # Warn again until user updates
+                    return True
+
+            with open(tsFn, "w") as fil:
+                fil.write(str(now))
+
+        return False
+
     def hasCliUpdates(self):
         if str(require(__package__)[0].version) == "LAST-TAG":
             # Local development or installed from Git
