@@ -36,10 +36,11 @@ class AliDock(object):
         self.dirInside = "/home/alidock"
         self.logRelative = ".alidock.log"
         self.conf = {
-            "dockName"     : "alidock",
-            "imageName"    : "alisw/alidock:latest",
-            "dirOutside"   : "~/alidock",
-            "updatePeriod" : 43200
+            "dockName"         : "alidock",
+            "imageName"        : "alisw/alidock:latest",
+            "dirOutside"       : "~/alidock",
+            "updatePeriod"     : 43200,
+            "ignoreImgUpdates" : False
         }
         self.parseConfig()
         self.overrideConfig(overrideConf)
@@ -143,7 +144,13 @@ class AliDock(object):
         except docker.errors.NotFound:
             pass  # final state is fine, container is gone
 
-    def hasUpdates(self):
+    def pull(self):
+        try:
+            self.cli.images.pull(self.conf["imageName"])
+        except docker.errors.APIError as exc:
+            raise AliDockError(str(exc))
+
+    def hasCliUpdates(self):
         if str(require(__package__)[0].version) == "LAST-TAG":
             # Local development or installed from Git
             return False
@@ -173,6 +180,25 @@ class AliDock(object):
 
         return False
 
+    def hasImgUpdates(self):
+        tsFn = os.path.join(self.conf["dirOutside"], self.lastUpdRelative)
+        try:
+            with open(tsFn) as fil:
+                lastUpdate = int(fil.read())
+        except (IOError, OSError, ValueError):
+            lastUpdate = 0
+        now = int(time())
+        if self.conf["imageName"] != "alisw/alidock:latest" or self.conf["ignoreImgUpdates"]:
+            # Either not using the default image or don't want to update
+            return False
+        if now - lastUpdate > int(self.conf["updatePeriod"]):
+            rmtDgst = self.cli.images.get_registry_data(
+                self.conf["imageName"]).attrs["Descriptor"]["digest"]
+            lclDgst = self.cli.images.get(
+                self.conf["imageName"]).attrs["RepoDigests"][0].split("@")[1]
+            return False if rmtDgst == lclDgst else True
+        return False
+
 def entrypoint():
     argp = ArgumentParser()
     argp.add_argument("--quiet", dest="quiet", default=False, action="store_true",
@@ -195,6 +221,9 @@ def entrypoint():
                       help="Override host path of persistent home [dirOutside]")
     argp.add_argument("--update-period", dest="updatePeriod", default=None,
                       help="Override update check period [updatePeriod]")
+    argp.add_argument("--ignore-updates", dest="ignoreImgUpdates", default=False,
+                      action="store_true",
+                      help="Ignore check for image updates [ignoreImgUpdates]")
 
     argp.add_argument("action", default="enter", nargs="?",
                       choices=["enter", "root", "exec", "start", "status", "stop"],
@@ -220,6 +249,9 @@ def entrypoint():
         exit(12)
 
 def processEnterStart(aliDock, args):
+    if aliDock.hasImgUpdates():
+        LOG.info("Pulling latest container image...")
+        aliDock.pull()
     created = False
     if not aliDock.isRunning():
         created = True
@@ -267,12 +299,12 @@ def processActions(args):
     aliDock = AliDock(args.__dict__)
 
     try:
-        if aliDock.hasUpdates():
+        if aliDock.hasCliUpdates():
             LOG.error("You are using an obsolete version of alidock.")
             LOG.error("Upgrade NOW with:")
             LOG.error("    pip install alidock --upgrade")
     except AliDockError:
-        LOG.warning("Cannot check for updates this time")
+        LOG.warning("Cannot check for aliDock updates this time")
 
     if args.action in ["enter", "exec", "root", "start"]:
         processEnterStart(aliDock, args)
