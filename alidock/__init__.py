@@ -112,7 +112,7 @@ class AliDock(object):
                                    "check permissions".format(dir=self.conf["dirOutside"]))
 
         # Create initialisation script
-        initSh = jinja2.Template(resource_string("alidock.helpers", "init.sh.j2"))
+        initSh = jinja2.Template(resource_string("alidock.helpers", "init.sh.j2").decode("utf-8"))
         userId = os.getuid()
         userName = getpwuid(userId).pw_name
         initShPath = os.path.join(outDir, ".alidock-init.sh")
