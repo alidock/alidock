@@ -210,12 +210,14 @@ class AliDock(object):
             return False
 
         def updateFunc():
-            availHash = self.cli.images.get_registry_data(
-                self.conf["imageName"]).attrs["Descriptor"]["digest"]
-            localHash = self.cli.images.get(
-                self.conf["imageName"]).attrs["RepoDigests"][0].split("@")[1]
-            LOG.debug("local: {loc}, remote: {remo}".format(loc=localHash, remo=availHash))
-            return availHash != localHash
+            try:
+                localHash = self.cli.images.get(
+                    self.conf["imageName"]).attrs["RepoDigests"][0].split("@")[1]
+                availHash = self.cli.images.get_registry_data(
+                    self.conf["imageName"]).attrs["Descriptor"]["digest"]
+                return availHash != localHash
+            except (IndexError, docker.errors.APIError) as exc:
+                raise AliDockError("cannot update Docker image: {msg}".format(msg=str(exc)))
 
         return self.hasUpdates(stateFileRelative=".alidock_docker_check",
                                updatePeriod=self.conf["updatePeriod"],
