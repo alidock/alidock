@@ -179,6 +179,7 @@ class AliDock(object):
                     fil.write(str(now))
 
             if caught is not None:
+                # pylint: disable=raising-bad-type
                 raise caught
 
         return updateAvail
