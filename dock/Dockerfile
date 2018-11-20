@@ -1,6 +1,6 @@
 FROM alisw/slc7-builder
 RUN rpmdb --rebuilddb && yum clean all && rm -rf /var/cache/yum && \
-    yum -y install xcalc tmux htop && \
+    yum -y install xcalc tmux htop bash-completion && \
     yum clean all && rm -rf /var/cache/yum
 ADD sshd_config /etc/ssh/sshd_config
 RUN pip install alibuild==v1.5.4rc5
@@ -10,3 +10,11 @@ RUN cd /tmp && \
     mv -v cloudflared /usr/sbin && \
     which cloudflared && \
     rm -f /tmp/cloudflared*.tgz
+RUN cd /tmp && \
+    curl -LO https://github.com/github/hub/releases/download/v2.6.0/hub-linux-amd64-2.6.0.tgz && \
+    tar xzf hub-linux*.tgz && \
+    rm -f hub-linux*.tgz && \
+    cd hub-linux* && \
+    ./install && \
+    cd .. && \
+    rm -rf hub-linux*
