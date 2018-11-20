@@ -17,6 +17,7 @@ function _alidock_ps1() {
 }
 export -f _alidock_ps1
 export PS1='`_alidock_ps1`[{{dockName}}] \w \$> '
+export ALIBUILD_WORK_DIR="$HOME/.sw"
 export _ALIDOCK_ENV=1
 EOF
 
