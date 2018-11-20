@@ -348,7 +348,7 @@ def processActions(args):
             LOG.error("Upgrade NOW with:")
             LOG.error("    pip install alidock --upgrade")
     except AliDockError:
-        LOG.warning("Cannot check for aliDock updates this time")
+        LOG.warning("Cannot check for alidock updates this time")
 
     if args.action in ["enter", "exec", "root", "start"]:
         processEnterStart(aliDock, args)
