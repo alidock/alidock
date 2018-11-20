@@ -201,7 +201,7 @@ class AliDock(object):
                 localVersion = parse_version(require(__package__)[0].version)
                 if availVersion > localVersion:
                     return True
-            except (requests.RequestException, ValueError) as exc:
+            except (RequestException, ValueError) as exc:
                 raise AliDockError(str(exc))
             return False
 
@@ -288,9 +288,11 @@ def processEnterStart(aliDock, args):
 
         try:
             if aliDock.hasImageUpdates():
-                LOG.info("Updating container")
+                LOG.info("Updating container image, hold on")
                 aliDock.pull()
-        except AliDockError as exc:
+                LOG.warning("Container updated, you may want to free some space with:")
+                LOG.warning("    docker system prune")
+        except AliDockError:
             LOG.warning("Cannot update container image this time")
 
         LOG.info("Creating container, hold on")
