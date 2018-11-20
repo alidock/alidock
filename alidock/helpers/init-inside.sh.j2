@@ -1,9 +1,9 @@
 #!/bin/bash -ex
 
-# Init script for alidock. Will run inside the container. Auto-generated.
+# Init script for alidock that runs inside the container. Auto-generated.
 
 # Log into the shared directory to allow debug
-exec &> >(tee "{{sharedDir}}/{{logRelative}}")
+exec &> >(tee "{{sharedDir}}/{{logFile}}")
 
 cd /
 

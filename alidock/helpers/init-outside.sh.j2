@@ -1,0 +1,17 @@
+#!/bin/bash -ex
+
+# Init script for alidock that runs outside the container. Auto-generated.
+
+# Log into the shared directory to allow debug
+exec &> >(tee "{{alidockDir}}/{{logFile}}")
+
+cd /
+
+{% if operatingSystem == "Darwin" %}
+# macOS-specific: exclude aliBuild directory from Time Machine backups
+mkdir -p "{{alidockDir}}/.sw"
+tmutil addexclusion "{{alidockDir}}/.sw"
+xattr "{{alidockDir}}/.sw"
+{% else %}
+# Nothing to do for the moment on Linux/Windows/whatever
+{% endif %}

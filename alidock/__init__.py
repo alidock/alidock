@@ -9,6 +9,7 @@ import errno
 import os
 import os.path
 import json
+import platform
 import subprocess
 import yaml
 from yaml import YAMLError
@@ -33,7 +34,6 @@ class AliDock(object):
     def __init__(self, overrideConf=None):
         self.cli = docker.from_env()
         self.dirInside = "/home/alidock"
-        self.logRelative = ".alidock.log"
         self.conf = {
             "dockName"        : "alidock",
             "imageName"       : "alisw/alidock:latest",
@@ -74,7 +74,7 @@ class AliDock(object):
             attrs = self.cli.containers.get(self.conf["dockName"]).attrs
             sshPort = attrs["NetworkSettings"]["Ports"]["22/tcp"][0]["HostPort"]
         except (docker.errors.NotFound, KeyError) as exc:
-            outLog = os.path.join(self.conf["dirOutside"], self.logRelative)
+            outLog = os.path.join(self.conf["dirOutside"], ".alidock.log")
             raise AliDockError("cannot find container, maybe it did not start up properly: "
                                "check log file {outLog} for details. Error: {msg}"
                                .format(outLog=outLog, msg=exc))
@@ -111,18 +111,38 @@ class AliDock(object):
                 raise AliDockError("cannot create directory {dir} to share with container, "
                                    "check permissions".format(dir=self.conf["dirOutside"]))
 
-        # Create initialisation script
-        initSh = jinja2.Template(resource_string("alidock.helpers", "init.sh.j2").decode("utf-8"))
+        # Create initialization scripts: one runs outside the container, the other inside
         userId = os.getuid()
         userName = getpwuid(userId).pw_name
+
         initShPath = os.path.join(outDir, ".alidock-init.sh")
+        initSh = jinja2.Template(
+            resource_string("alidock.helpers", "init-inside.sh.j2").decode("utf-8"))
         with open(initShPath, "w") as fil:
-            fil.write(initSh.render(logRelative=self.logRelative,
+            fil.write(initSh.render(logFile=".alidock.log",
                                     sharedDir=self.dirInside,
                                     dockName=self.conf["dockName"].rsplit("-", 1)[0],
                                     userName=userName,
                                     userId=userId))
-        os.chmod(initShPath, 0o755)
+        os.chmod(initShPath, 0o700)
+
+        initOutsideShPath = os.path.join(outDir, ".alidock-init-host.sh")
+        initOutsideSh = jinja2.Template(
+            resource_string("alidock.helpers", "init-outside.sh.j2").decode("utf-8"))
+        with open(initOutsideShPath, "w") as fil:
+            fil.write(initOutsideSh.render(operatingSystem=platform.system(),
+                                           logFile=".alidock-host.log",
+                                           alidockDir=os.path.expanduser(self.conf["dirOutside"])))
+        os.chmod(initOutsideShPath, 0o700)
+
+        # Execute the script on the host immediately: errors are fatal
+        try:
+            nul = open(os.devnull, "w")
+            subprocess.check_call(initOutsideShPath, stdout=nul, stderr=nul)
+        except subprocess.CalledProcessError:
+            raise AliDockError("fatal error running the host initialization script: "
+                               "check {log}".format(
+                                   log=os.path.join(self.conf["dirOutside"], ".alidock-host.log")))
 
         # Start container with that script
         self.cli.containers.run(self.conf["imageName"],
