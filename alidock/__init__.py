@@ -32,14 +32,14 @@ class AliDock(object):
 
     def __init__(self, overrideConf=None):
         self.cli = docker.from_env()
-        self.lastUpdRelative = ".alidock_last_updated"
         self.dirInside = "/home/alidock"
         self.logRelative = ".alidock.log"
         self.conf = {
-            "dockName"     : "alidock",
-            "imageName"    : "alisw/alidock:latest",
-            "dirOutside"   : "~/alidock",
-            "updatePeriod" : 43200
+            "dockName"        : "alidock",
+            "imageName"       : "alisw/alidock:latest",
+            "dirOutside"      : "~/alidock",
+            "updatePeriod"    : 43200,
+            "dontUpdateImage" : False
         }
         self.parseConfig()
         self.overrideConfig(overrideConf)
@@ -143,12 +143,21 @@ class AliDock(object):
         except docker.errors.NotFound:
             pass  # final state is fine, container is gone
 
-    def hasUpdates(self):
-        if str(require(__package__)[0].version) == "LAST-TAG":
-            # Local development or installed from Git
-            return False
+    def pull(self):
+        try:
+            self.cli.images.pull(self.conf["imageName"])
+        except docker.errors.APIError as exc:
+            raise AliDockError(str(exc))
 
-        tsFn = os.path.join(self.conf["dirOutside"], self.lastUpdRelative)
+    def hasUpdates(self, stateFileRelative, updatePeriod, nagOnUpdate, updateFunc):
+        """Generic function that checks for updates every updatePeriod seconds, saving the state
+           on stateFileRelative (relative to the container's home directory). It returns True in
+           case there is an update, False in case there is none. A custom function updateFunc is
+           ran to determine whether to update. Set nagOnUpdate to True if, upon an update, the
+           state file should not be updated in order to trigger another check at the next run (this
+           nags users until they update)."""
+
+        tsFn = os.path.join(os.path.expanduser(self.conf["dirOutside"]), stateFileRelative)
         try:
             with open(tsFn) as fil:
                 lastUpdate = int(fil.read())
@@ -156,7 +165,34 @@ class AliDock(object):
             lastUpdate = 0
 
         now = int(time())
-        if now - lastUpdate > int(self.conf["updatePeriod"]):
+        updateAvail = False
+        if now - lastUpdate > int(updatePeriod):
+
+            caught = None
+            try:
+                updateAvail = updateFunc()
+            except AliDockError as exc:
+                caught = exc
+
+            if not nagOnUpdate:
+                with open(tsFn, "w") as fil:
+                    fil.write(str(now))
+
+            if caught is not None:
+                # pylint: disable=raising-bad-type
+                raise caught
+
+        return updateAvail
+
+    def hasClientUpdates(self):
+        """Check for client updates (alidock) without performing them. Returns True if updates are
+           found, false otherwise."""
+
+        if str(require(__package__)[0].version) == "LAST-TAG":
+            # No check for local development or version from VCS
+            return False
+
+        def updateFunc():
             try:
                 pypaData = requests.get("https://pypi.org/pypi/{pkg}/json".format(pkg=__package__),
                                         timeout=5)
@@ -165,13 +201,40 @@ class AliDock(object):
                 localVersion = parse_version(require(__package__)[0].version)
                 if availVersion > localVersion:
                     return True
-            except (requests.RequestException, ValueError) as exc:
+            except (RequestException, ValueError) as exc:
+                raise AliDockError(str(exc))
+            return False
+
+        return self.hasUpdates(stateFileRelative=".alidock_pip_check",
+                               updatePeriod=self.conf["updatePeriod"],
+                               nagOnUpdate=True,
+                               updateFunc=updateFunc)
+
+    def hasImageUpdates(self):
+        """Check for image updates without performing them. Returns True if updates are found, False
+           otherwise."""
+
+        if self.conf["dontUpdateImage"]:
+            return False
+
+        def updateFunc():
+            try:
+                try:
+                    localHash = self.cli.images.get(
+                        self.conf["imageName"]).attrs["RepoDigests"][0].split("@")[1]
+                except docker.errors.NotFound:
+                    # Image does not exist locally: no updates are available (run will fetch it)
+                    return False
+                availHash = self.cli.images.get_registry_data(
+                    self.conf["imageName"]).attrs["Descriptor"]["digest"]
+                return availHash != localHash
+            except (IndexError, docker.errors.APIError) as exc:
                 raise AliDockError(str(exc))
 
-            with open(tsFn, "w") as fil:
-                fil.write(str(now))
-
-        return False
+        return self.hasUpdates(stateFileRelative=".alidock_docker_check",
+                               updatePeriod=self.conf["updatePeriod"],
+                               nagOnUpdate=False,
+                               updateFunc=updateFunc)
 
 def entrypoint():
     argp = ArgumentParser()
@@ -195,6 +258,9 @@ def entrypoint():
                       help="Override host path of persistent home [dirOutside]")
     argp.add_argument("--update-period", dest="updatePeriod", default=None,
                       help="Override update check period [updatePeriod]")
+    argp.add_argument("--no-update-image", dest="dontUpdateImage", default=False,
+                      action="store_true",
+                      help="Do not update the Docker image [dontUpdateImage]")
 
     argp.add_argument("action", default="enter", nargs="?",
                       choices=["enter", "root", "exec", "start", "status", "stop"],
@@ -223,6 +289,16 @@ def processEnterStart(aliDock, args):
     created = False
     if not aliDock.isRunning():
         created = True
+
+        try:
+            if aliDock.hasImageUpdates():
+                LOG.info("Updating container image, hold on")
+                aliDock.pull()
+                LOG.warning("Container updated, you may want to free some space with:")
+                LOG.warning("    docker system prune")
+        except AliDockError:
+            LOG.warning("Cannot update container image this time")
+
         LOG.info("Creating container, hold on")
         aliDock.run()
     if args.action == "enter":
@@ -267,12 +343,12 @@ def processActions(args):
     aliDock = AliDock(args.__dict__)
 
     try:
-        if aliDock.hasUpdates():
+        if aliDock.hasClientUpdates():
             LOG.error("You are using an obsolete version of alidock.")
             LOG.error("Upgrade NOW with:")
             LOG.error("    pip install alidock --upgrade")
     except AliDockError:
-        LOG.warning("Cannot check for updates this time")
+        LOG.warning("Cannot check for alidock updates this time")
 
     if args.action in ["enter", "exec", "root", "start"]:
         processEnterStart(aliDock, args)
