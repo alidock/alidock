@@ -165,16 +165,23 @@ class AliDock(object):
             lastUpdate = 0
 
         now = int(time())
+        updateAvail = False
         if now - lastUpdate > int(updatePeriod):
-            if updateFunc() is True:
-                if nagOnUpdate:
-                    # Warn again until user updates
-                    return True
 
-            with open(tsFn, "w") as fil:
-                fil.write(str(now))
+            caught = None
+            try:
+                updateAvail = updateFunc()
+            except AliDockError as exc:
+                caught = exc
 
-        return False
+            if not nagOnUpdate:
+                with open(tsFn, "w") as fil:
+                    fil.write(str(now))
+
+            if caught is not None:
+                raise caught
+
+        return updateAvail
 
     def hasClientUpdates(self):
         """Check for client updates (alidock) without performing them. Returns True if updates are
@@ -217,7 +224,7 @@ class AliDock(object):
                     self.conf["imageName"]).attrs["Descriptor"]["digest"]
                 return availHash != localHash
             except (IndexError, docker.errors.APIError) as exc:
-                raise AliDockError("cannot update Docker image: {msg}".format(msg=str(exc)))
+                raise AliDockError(str(exc))
 
         return self.hasUpdates(stateFileRelative=".alidock_docker_check",
                                updatePeriod=self.conf["updatePeriod"],
