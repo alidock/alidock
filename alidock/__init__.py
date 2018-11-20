@@ -219,8 +219,12 @@ class AliDock(object):
 
         def updateFunc():
             try:
-                localHash = self.cli.images.get(
-                    self.conf["imageName"]).attrs["RepoDigests"][0].split("@")[1]
+                try:
+                  localHash = self.cli.images.get(
+                                  self.conf["imageName"]).attrs["RepoDigests"][0].split("@")[1]
+                except docker.errors.NotFound:
+                    # Image does not exist locally: no updates are available (run will fetch it)
+                    return False
                 availHash = self.cli.images.get_registry_data(
                     self.conf["imageName"]).attrs["Descriptor"]["digest"]
                 return availHash != localHash
