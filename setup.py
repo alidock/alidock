@@ -14,7 +14,7 @@ setup(
   # Long description from Markdown -- https://dustingram.com/articles/2018/03/16/markdown-descriptions-on-pypi
   # Filter out lines that look like GitHub "badges"
   long_description="\n".join([ line for line in open('README.md').read().split("\n") if not line.startswith("[![") ]),
-  ong_description_content_type='text/markdown',
+  long_description_content_type='text/markdown',
 
   url='https://github.com/dberzano/alidock',
   author='Dario Berzano',
