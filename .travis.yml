@@ -8,9 +8,10 @@ python:
 install: |
   set -e
   set -o pipefail
-  for PKG in pylint argparse requests PyYaml docker Jinja2 twine; do
-    pip install "$PKG"
+  for PKG in pylint argparse requests PyYaml docker Jinja2 'twine>=1.11.0' 'setuptools>=38.6.0'; do
+    pip install "$PKG" --upgrade
   done
+  pip list
 script: |
   set -e
   set -o pipefail
