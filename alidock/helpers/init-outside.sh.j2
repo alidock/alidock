@@ -10,7 +10,7 @@ cd /
 {% if operatingSystem == "Darwin" %}
 # macOS: exclude aliBuild directory from Spotlight searches
 # This also migrates an existing .sw directory to .sw.noindex and creates proper
-# symlinks. The approach is conservative wrt/manual user configurations
+# symlinks. The approach is conservative: it won't destroy any custom data
 if [[   -d "{{alidockDir}}/.sw" && \
       ! -L "{{alidockDir}}/.sw" && \
       ! -e "{{alidockDir}}/.sw.noindex" ]]; then

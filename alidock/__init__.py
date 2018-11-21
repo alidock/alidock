@@ -352,7 +352,7 @@ def processStatus(aliDock):
     exit(1)
 
 def processStop(aliDock):
-    LOG.info("Destroying the container")
+    LOG.info("Shutting down the container")
     aliDock.stop()
 
 def processActions(args):
