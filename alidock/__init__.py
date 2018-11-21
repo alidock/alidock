@@ -105,7 +105,7 @@ class AliDock(object):
         # Create directory to be shared with the container
         outDir = os.path.expanduser(self.conf["dirOutside"])
         try:
-            os.mkdir(outDir)
+            os.makedirs(outDir)
         except OSError as exc:
             if not os.path.isdir(outDir) or exc.errno != errno.EEXIST:
                 raise AliDockError("cannot create directory {dir} to share with container, "
@@ -177,7 +177,8 @@ class AliDock(object):
            state file should not be updated in order to trigger another check at the next run (this
            nags users until they update)."""
 
-        tsFn = os.path.join(os.path.expanduser(self.conf["dirOutside"]), stateFileRelative)
+        tsDir = os.path.expanduser(self.conf["dirOutside"])
+        tsFn = os.path.join(tsDir, stateFileRelative)
         try:
             with open(tsFn) as fil:
                 lastUpdate = int(fil.read())
@@ -195,6 +196,11 @@ class AliDock(object):
                 caught = exc
 
             if not nagOnUpdate:
+                try:
+                    os.makedirs(tsDir)
+                except OSError as exc:
+                    if not os.path.isdir(tsDir) or exc.errno != errno.EEXIST:
+                        raise exc
                 with open(tsFn, "w") as fil:
                     fil.write(str(now))
 
