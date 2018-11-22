@@ -31,11 +31,25 @@ chown {{userId}} /var/git-creds-{{userId}}
 cat > /etc/profile.d/alidock.sh <<\EOF
 #!/bin/bash
 [[ $_ALIDOCK_ENV ]] && return 0;
+
 function _alidock_ps1() {
   local RV=$?
   [[ $RV != 0 ]] && echo -n "$RV|"
 }
 export -f _alidock_ps1
+
+function aliBuildUpdateMirrors() {
+  for REPO in $ALIBUILD_WORK_DIR/MIRROR/*/objects; do
+    [[ -d $REPO ]] || continue
+    REPO=$(dirname "$REPO")
+    echo "Updating $(basename $REPO)"
+    pushd "$REPO" &> /dev/null
+      git remote update
+    popd &> /dev/null
+  done
+}
+export -f aliBuildUpdateMirrors
+
 export PS1='`_alidock_ps1`[{{dockName}}] \w \$> '
 [[ -d /persist ]] && export ALIBUILD_WORK_DIR="/persist/sw" || export ALIBUILD_WORK_DIR="$HOME/.sw"
 type alienv &> /dev/null && eval "$(alienv shell-helper)"
