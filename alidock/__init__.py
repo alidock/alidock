@@ -14,6 +14,7 @@ import subprocess
 import yaml
 from yaml import YAMLError
 import docker
+from docker.types import Mount
 import jinja2
 import requests
 from requests.exceptions import RequestException
@@ -144,6 +145,11 @@ class AliDock(object):
                                "check {log}".format(
                                    log=os.path.join(self.conf["dirOutside"], ".alidock-host.log")))
 
+        # Define which mounts to expose to the container. On non-Linux, we need a native volume too
+        dockMounts = [Mount(self.dirInside, outDir, type="bind", consistency="cached")]
+        if platform.system() != "Linux":
+            dockMounts.append(Mount("/persist", "persist-"+self.conf["dockName"], type="volume"))
+
         # Start container with that script
         self.cli.containers.run(self.conf["imageName"],
                                 command=[os.path.join(self.dirInside, ".alidock-init.sh")],
@@ -151,8 +157,7 @@ class AliDock(object):
                                 auto_remove=True,
                                 cap_add=["SYS_PTRACE"],
                                 name=self.conf["dockName"],
-                                mounts=[docker.types.Mount(self.dirInside,
-                                                           outDir, type="bind")],
+                                mounts=dockMounts,
                                 ports={"22/tcp": None})  # None == random port
 
         return True

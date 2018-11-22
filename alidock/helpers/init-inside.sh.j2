@@ -7,6 +7,21 @@ exec &> >(tee "{{sharedDir}}/{{logFile}}")
 
 cd /
 
+# Check whether we have a persistent native volume and make it usable
+if [[ -d /persist ]]; then
+  chmod 0700 /persist
+  chown {{userId}} /persist
+  mkdir -p /persist/sw
+  chown {{userId}} /persist/sw
+  # The MIRROR directory stays on the bind mount: pre-create it
+  if [[ ! -d /persist/sw/MIRROR ]]; then
+    # If for some reason it is already there as a directory, leave it be
+    mkdir -p "{{sharedDir}}/.sw/MIRROR"
+    chown {{userId}} "{{sharedDir}}/.sw/MIRROR"
+    ln -nfs "{{sharedDir}}/.sw/MIRROR" /persist/sw/MIRROR
+  fi
+fi
+
 # Make directory for holding Git secrets (no sockets in Docker bind mounts)
 mkdir -p /var/git-creds-{{userId}}
 chmod 0700 /var/git-creds-{{userId}}
@@ -22,7 +37,7 @@ function _alidock_ps1() {
 }
 export -f _alidock_ps1
 export PS1='`_alidock_ps1`[{{dockName}}] \w \$> '
-export ALIBUILD_WORK_DIR="$HOME/.sw"
+[[ -d /persist ]] && export ALIBUILD_WORK_DIR="/persist/sw" || export ALIBUILD_WORK_DIR="$HOME/.sw"
 type alienv &> /dev/null && eval "$(alienv shell-helper)"
 if [[ $(id -u) == {{userId}} ]]; then
   git config --global credential.helper 'cache --timeout 86400 --socket /var/git-creds-{{userId}}/socket'
