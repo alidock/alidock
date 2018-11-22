@@ -60,6 +60,10 @@ type hub &> /dev/null && alias git=hub
 export _ALIDOCK_ENV=1
 EOF
 
+# Git global options
+git config --system core.pager ''
+git config --system color.ui auto
+
 # Make tab completions case insensitive
 echo 'set completion-ignore-case on' >> /etc/inputrc
 
