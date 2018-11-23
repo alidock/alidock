@@ -102,17 +102,43 @@ class AliDock(object):
     def rootShell(self):
         os.execvp("docker", ["docker", "exec", "-it", self.conf["dockName"], "/bin/bash"])
 
+    def makeOutDir(self):
+        outDir = os.path.expanduser(self.conf["dirOutside"])
+        if platform.system() == "Darwin" and not outDir.endswith(".noindex"):
+            outRealDir = os.path.join(os.path.dirname(outDir),
+                                      "." + os.path.basename(outDir) + ".noindex")
+        else:
+            outRealDir = outDir
+
+        if os.path.isdir(outDir) and not os.path.islink(outDir):
+            return  # use current directory if exists
+
+        try:
+            os.makedirs(outRealDir)
+        except OSError as exc:
+            if not os.path.isdir(outRealDir) or exc.errno != errno.EEXIST:
+                raise AliDockError("cannot create directory {dir} to share with container, "
+                                   "check permissions".format(dir=outRealDir))
+
+        if outRealDir == outDir:
+            return  # no need to create symlinks
+
+        try:
+            os.symlink(os.path.basename(outRealDir), outDir)
+        except OSError as exc:
+            if not os.path.islink(outDir) or exc.errno != errno.EEXIST:
+                raise AliDockError("cannot link {link} to {dir}, "
+                                   "check permissions".format(link=outDir, dir=outRealDir))
+
+        return
+
+
     def run(self):
         # Create directory to be shared with the container
-        outDir = os.path.expanduser(self.conf["dirOutside"])
-        try:
-            os.makedirs(outDir)
-        except OSError as exc:
-            if not os.path.isdir(outDir) or exc.errno != errno.EEXIST:
-                raise AliDockError("cannot create directory {dir} to share with container, "
-                                   "check permissions".format(dir=self.conf["dirOutside"]))
+        self.makeOutDir()
 
         # Create initialization scripts: one runs outside the container, the other inside
+        outDir = os.path.expanduser(self.conf["dirOutside"])
         userId = os.getuid()
         userName = getpwuid(userId).pw_name
 
@@ -146,7 +172,8 @@ class AliDock(object):
                                    log=os.path.join(self.conf["dirOutside"], ".alidock-host.log")))
 
         # Define which mounts to expose to the container. On non-Linux, we need a native volume too
-        dockMounts = [Mount(self.dirInside, outDir, type="bind", consistency="cached")]
+        dockMounts = [Mount(self.dirInside, os.path.realpath(outDir),
+                            type="bind", consistency="cached")]
         if platform.system() != "Linux":
             dockMounts.append(Mount("/persist", "persist-"+self.conf["dockName"], type="volume"))
 
@@ -201,11 +228,7 @@ class AliDock(object):
                 caught = exc
 
             if not nagOnUpdate:
-                try:
-                    os.makedirs(tsDir)
-                except OSError as exc:
-                    if not os.path.isdir(tsDir) or exc.errno != errno.EEXIST:
-                        raise exc
+                self.makeOutDir()
                 with open(tsFn, "w") as fil:
                     fil.write(str(now))
 
