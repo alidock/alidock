@@ -14,7 +14,7 @@ then:
 You are instantly dropped in a shell with a consistent ALICE environment from a Docker container.
 From there you can directly run, for example:
 
-    aliBuild build init O2
+    aliBuild init O2
     aliBuild build O2 --defaults o2
 
 and it will download the precompiled binaries for you.
