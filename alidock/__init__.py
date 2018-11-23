@@ -271,6 +271,8 @@ def entrypoint():
     argp = ArgumentParser()
     argp.add_argument("--quiet", dest="quiet", default=False, action="store_true",
                       help="Do not print any message")
+    argp.add_argument("--version", dest="version", default=False, action="store_true",
+                      help="Print current alidock version on stdout")
 
     # tmux: both normal and terminal integration ("control mode")
     tmuxArgs = argp.add_mutually_exclusive_group()
@@ -367,6 +369,13 @@ def processStop(aliDock):
     aliDock.stop()
 
 def processActions(args):
+
+    if args.version:
+        ver = str(require(__package__)[0].version)
+        if ver == "LAST-TAG":
+            ver = "development version"
+        print("{prog} {version}".format(prog=__package__, version=ver))
+        return
 
     if os.getuid() == 0:
         raise AliDockError("refusing to execute as root: use an unprivileged user account")
