@@ -85,7 +85,7 @@ class AliDock(object):
                 "-i", os.path.join(self.conf["dirOutside"], ".alidock-ssh", "alidock.pem")]
 
     def waitSshUp(self):
-        for _ in range(0, 40):
+        for _ in range(0, 50):
             try:
                 nul = open(os.devnull, "w")
                 subprocess.check_call(self.getSshCommand() + ["-T", "/bin/true"],
