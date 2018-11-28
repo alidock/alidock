@@ -1,6 +1,6 @@
 FROM alisw/slc7-builder
 RUN rpmdb --rebuilddb && yum clean all && rm -rf /var/cache/yum && \
-    yum -y install xcalc tmux htop bash-completion tig pigz && \
+    yum -y install xcalc tmux htop bash-completion tig pigz nano && \
     yum clean all && rm -rf /var/cache/yum
 RUN pip install alibuild==v1.5.4rc6
 RUN cd /tmp && \
