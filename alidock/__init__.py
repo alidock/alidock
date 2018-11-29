@@ -246,7 +246,7 @@ class AliDock(object):
             os.environ["ALIDOCK_ARGS"] = " ".join(sys.argv[1:])
             os.execvp("bash",
                       ["bash", "-c",
-                       "bash <(curl -fsSL {url}) --no-check-docker".format(url=updateUrl)])
+                       "bash <(curl -fsSL {url}) --no-check-docker --quiet".format(url=updateUrl)])
 
     def hasClientUpdates(self):
         """Check for client updates (alidock) without performing them. Returns True if updates are
