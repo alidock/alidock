@@ -12,8 +12,8 @@ VENV_DEST="$HOME/.virtualenvs/alidock"
 PROG_DIR=$(cd "$(dirname "$0")"; pwd)
 
 function pinfo() { echo -e "\033[32m${1}\033[m"; }
-function perr() { echo -e "\033[31m${1}\033[m"; }
 function pwarn() { echo -e "\033[33m${1}\033[m"; }
+function perr() { echo -e "\033[31m${1}\033[m"; }
 function swallow() {
   local ERR=0
   "$@" &> "$TMPDIR/log" || ERR=$?
@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     git) MODE=git ;;
     devel) MODE=devel ;;
-    --dont-check-docker) CHECK_DOCKER= ;;
+    --no-check-docker) CHECK_DOCKER= ;;
     --help)
       pinfo "alidock-installer: install alidock in a Python virtualenv"
       pinfo ""
@@ -45,8 +45,13 @@ while [[ $# -gt 0 ]]; do
       pwarn "    alidock-installer <version>  # install specific version from PyPI"
       pwarn ""
       pwarn "Parameters:"
-      pwarn "    --dont-check-docker          # don't check if Docker works"
+      pwarn "    --no-check-docker            # don't check if Docker works"
+      pwarn "    --quiet                      # suppress messages (except errors)"
       exit 1
+    ;;
+    --quiet)
+      function pinfo() { :; }
+      function pwarn() { :; }
     ;;
     -*)
       perr "Unknown option: $1"

@@ -233,17 +233,20 @@ class AliDock(object):
 
         return updateAvail
 
-    def doAutoUpdate(self):
+    @staticmethod
+    def doAutoUpdate():
         """Perform an automatic update of alidock only if it was installed in the custom virtual
            environment."""
         curModulePath = os.path.realpath(__file__)
         #updateUrl = "https://bit.ly/alidock-installer"
-        updateUrl = "https://raw.githubusercontent.com/dberzano/alidock/alidock-installer/alidock-installer"
+        updateUrl = "https://raw.githubusercontent.com/dberzano/alidock/alidock-installer/alidock-installer"  # TODO
         virtualenvPath = os.path.realpath(os.path.expanduser("~/.virtualenvs/alidock"))
         if curModulePath.startswith(virtualenvPath):
             LOG.warning("Updating alidock automatically")
             os.environ["ALIDOCK_ARGS"] = " ".join(sys.argv[1:])
-            os.execvp("bash", ["bash", "-c", "bash <(curl -fsSL {url})".format(url=updateUrl)])
+            os.execvp("bash",
+                      ["bash", "-c",
+                       "bash <(curl -fsSL {url}) --no-check-docker".format(url=updateUrl)])
 
     def hasClientUpdates(self):
         """Check for client updates (alidock) without performing them. Returns True if updates are
