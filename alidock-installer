@@ -137,9 +137,8 @@ fi
 
 rm -rf "$TMPDIR"
 
-if [[ $ALIDOCK_ARGS ]]; then
+if [[ $ALIDOCK_RUN ]]; then
   # Updater started from alidock. Re-run alidock immediately after the update
   unset alidock &> /dev/null || true
-  echo now I am executing alidock $ALIDOCK_ARGS
   exec alidock $ALIDOCK_ARGS
 fi
