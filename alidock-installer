@@ -50,7 +50,6 @@ swallow source "$VENV_DEST/bin/activate"
 swallow pip install --upgrade alidock
 
 # Patch init scripts for bash and zsh
-SHELLRC="$HOME/.bashrc"
 SHELL_CHANGED=
 for SHELLRC in $HOME/.bashrc $HOME/.bash_profile $HOME/.zshrc; do
   if ! grep -q 'function alidock()' "$SHELLRC" &> /dev/null; then
