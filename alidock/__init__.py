@@ -41,7 +41,7 @@ class AliDock(object):
             "dirOutside"       : "~/alidock",
             "updatePeriod"     : 43200,
             "dontUpdateImage"  : False,
-            "useNVidiaRuntime" : False
+            "useNvidiaRuntime" : False
         }
         self.parseConfig()
         self.overrideConfig(overrideConf)
@@ -154,13 +154,12 @@ class AliDock(object):
         if platform.system() != "Linux":
             dockMounts.append(Mount("/persist", "persist-"+self.conf["dockName"], type="volume"))
 
-        # If requested check for nvidia runtime in docker. Configure env and runtime, if found
-        if self.conf["useNVidiaRuntime"]:
+        if self.conf["useNvidiaRuntime"]:
             if self.hasRuntime("nvidia"):
                 dockRuntime = "nvidia"
                 dockEnvironment = ["NVIDIA_VISIBLE_DEVICES=all"]
             else:
-                raise AliDockError("cannot find the nvidia runtime in your Docker installation")
+                raise AliDockError("cannot find the NVIDIA runtime in your Docker installation")
 
         # Start container with that script
         self.cli.containers.run(self.conf["imageName"],
@@ -311,9 +310,9 @@ def entrypoint():
     argp.add_argument("--no-update-image", dest="dontUpdateImage", default=None,
                       action="store_true",
                       help="Do not update the Docker image [dontUpdateImage]")
-    argp.add_argument("--nvidia", dest="useNVidiaRuntime", default=None,
+    argp.add_argument("--nvidia", dest="useNvidiaRuntime", default=None,
                       action="store_true",
-                      help="Launch container using the nVidia Docker runtime [useNVidiaRuntime]")
+                      help="Launch container using the NVIDIA Docker runtime [useNvidiaRuntime]")
 
     argp.add_argument("action", default="enter", nargs="?",
                       choices=["enter", "root", "exec", "start", "status", "stop"],
