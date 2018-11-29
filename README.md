@@ -8,7 +8,10 @@ alidock
 Run your ALICE environment from a container. Install [Docker](https://docs.docker.com/install/),
 then:
 
-    pip install alidock
+    bash <(curl -fsSL https://bit.ly/alidock-installer)
+
+You may need to close and reopen your terminal as advised. Run alidock now:
+
     alidock
 
 You are instantly dropped in a shell with a consistent ALICE environment from a Docker container.
