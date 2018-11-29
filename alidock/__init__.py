@@ -8,6 +8,7 @@ from time import time, sleep
 import errno
 import os
 import os.path
+import sys
 import json
 import platform
 import subprocess
@@ -36,12 +37,13 @@ class AliDock(object):
         self.cli = docker.from_env()
         self.dirInside = "/home/alidock"
         self.conf = {
-            "dockName"         : "alidock",
-            "imageName"        : "alisw/alidock:latest",
-            "dirOutside"       : "~/alidock",
-            "updatePeriod"     : 43200,
-            "dontUpdateImage"  : False,
-            "useNvidiaRuntime" : False
+            "dockName"          : "alidock",
+            "imageName"         : "alisw/alidock:latest",
+            "dirOutside"        : "~/alidock",
+            "updatePeriod"      : 43200,
+            "dontUpdateImage"   : False,
+            "dontUpdateAlidock" : False,
+            "useNvidiaRuntime"  : False
         }
         self.parseConfig()
         self.overrideConfig(overrideConf)
@@ -216,7 +218,7 @@ class AliDock(object):
             except AliDockError as exc:
                 caught = exc
 
-            if not nagOnUpdate:
+            if not updateAvail or not nagOnUpdate:
                 try:
                     os.makedirs(tsDir)
                 except OSError as exc:
@@ -230,6 +232,23 @@ class AliDock(object):
                 raise caught
 
         return updateAvail
+
+    @staticmethod
+    def doAutoUpdate():
+        """Perform an automatic update of alidock only if it was installed in the custom virtual
+           environment."""
+        curModulePath = os.path.realpath(__file__)
+        updateUrl = "https://bit.ly/alidock-installer"
+        virtualenvPath = os.path.realpath(os.path.expanduser("~/.virtualenvs/alidock"))
+        if curModulePath.startswith(virtualenvPath):
+            LOG.warning("Updating alidock automatically")
+            updateEnv = os.environ
+            updateEnv["ALIDOCK_ARGS"] = " ".join(sys.argv[1:])
+            updateEnv["ALIDOCK_RUN"] = "1"
+            os.execvpe("bash",
+                       ["bash", "-c",
+                        "bash <(curl -fsSL {url}) --no-check-docker --quiet".format(url=updateUrl)],
+                       updateEnv)
 
     def hasClientUpdates(self):
         """Check for client updates (alidock) without performing them. Returns True if updates are
@@ -310,6 +329,9 @@ def entrypoint():
     argp.add_argument("--no-update-image", dest="dontUpdateImage", default=None,
                       action="store_true",
                       help="Do not update the Docker image [dontUpdateImage]")
+    argp.add_argument("--no-update-alidock", dest="dontUpdateAlidock", default=None,
+                      action="store_true",
+                      help="Do not update alidock automatically [dontUpdateAlidock]")
     argp.add_argument("--nvidia", dest="useNvidiaRuntime", default=None,
                       action="store_true",
                       help="Launch container using the NVIDIA Docker runtime [useNvidiaRuntime]")
@@ -402,10 +424,11 @@ def processActions(args):
     aliDock = AliDock(args.__dict__)
 
     try:
-        if aliDock.hasClientUpdates():
+        if not aliDock.conf["dontUpdateAlidock"] and aliDock.hasClientUpdates():
+            aliDock.doAutoUpdate()
             LOG.error("You are using an obsolete version of alidock.")
             LOG.error("Upgrade NOW with:")
-            LOG.error("    pip install alidock --upgrade")
+            LOG.error("    bash <(curl -fsSL https://bit.ly/alidock-installer)")
     except AliDockError:
         LOG.warning("Cannot check for alidock updates this time")
 
