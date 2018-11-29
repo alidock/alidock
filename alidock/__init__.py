@@ -7,8 +7,8 @@ from pwd import getpwuid
 from time import time, sleep
 import errno
 import os
-import sys
 import os.path
+import sys
 import json
 import platform
 import subprocess
