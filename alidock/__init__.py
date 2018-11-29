@@ -245,6 +245,8 @@ class AliDock(object):
             LOG.warning("Updating alidock automatically")
             updateEnv = os.environ
             updateEnv["ALIDOCK_ARGS"] = " ".join(sys.argv[1:])
+            print(updateEnv)
+            exit(2)
             os.execvpe("bash",
                       ["bash", "-c",
                        "bash <(curl -fsSL {url}) --no-check-docker --quiet".format(url=updateUrl)],
@@ -253,6 +255,8 @@ class AliDock(object):
     def hasClientUpdates(self):
         """Check for client updates (alidock) without performing them. Returns True if updates are
            found, false otherwise."""
+
+        return True  # TODO
 
         if str(require(__package__)[0].version) == "LAST-TAG":
             # No check for local development or version from VCS
