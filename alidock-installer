@@ -9,6 +9,7 @@
 VIRTUALENV_VERSION=16.1.0
 TMPDIR=$(mktemp -d /tmp/alidock-installer-XXXXX)
 VENV_DEST="$HOME/.virtualenvs/alidock"
+PROG_DIR=$(cd "$(dirname "$0")"; pwd)
 
 function pinfo() { echo -e "\033[32m${1}\033[m"; }
 function perr() { echo -e "\033[31m${1}\033[m"; }
@@ -24,6 +25,38 @@ function swallow() {
   return $ERR
 }
 
+# Check parameters
+MODE=default
+CHECK_DOCKER=1
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    git) MODE=git ;;
+    devel) MODE=devel ;;
+    --dont-check-docker) CHECK_DOCKER= ;;
+    --help)
+      pinfo "alidock-installer: install alidock in a Python virtualenv"
+      pinfo ""
+      pinfo "Normal usage:"
+      pinfo "    alidock-installer            # use this if in doubt!"
+      pinfo ""
+      pwarn "Advanced usage:"
+      pwarn "    alidock-installer git        # install latest version from Git"
+      pwarn "    alidock-installer devel      # install local development version"
+      pwarn "    alidock-installer <version>  # install specific version from PyPI"
+      pwarn ""
+      pwarn "Parameters:"
+      pwarn "    --dont-check-docker          # don't check if Docker works"
+      exit 1
+    ;;
+    -*)
+      perr "Unknown option: $1"
+      exit 2
+    ;;
+    *) MODE="$1" ;;
+  esac
+  shift
+done
+
 # Favour `python3`, fall back on `python`
 PYTHON_BIN=python3
 type "$PYTHON_BIN" &> /dev/null || PYTHON_BIN=python
@@ -33,8 +66,10 @@ if ! type "$PYTHON_BIN" &> /dev/null; then
 fi
 
 # Check if Docker is there and user can use it
-pinfo "Checking if your Docker installation works"
-swallow docker run hello-world
+if [[ $CHECK_DOCKER ]]; then
+  pinfo "Checking if your Docker installation works"
+  swallow docker run hello-world
+fi
 
 cd /
 
@@ -47,7 +82,27 @@ popd &> /dev/null
 
 pinfo "Installing alidock under $VENV_DEST"
 swallow source "$VENV_DEST/bin/activate"
-swallow pip install --upgrade alidock
+
+URL=
+DEVEL=
+case "$MODE" in
+  default) URL=alidock ;;
+  git) URL=git+https://github.com/dberzano/alidock ;;
+  devel)
+    URL="$PROG_DIR"
+    if [[ ! -f "$URL/setup.py" ]]; then
+      perr "Execute the installer from the development directory $URL"
+      exit 1
+    fi
+    DEVEL="-e"
+  ;;
+  *) URL="alidock==$MODE" ;;
+esac
+
+swallow pip install --upgrade ${DEVEL} "${URL}"
+if [[ $DEVEL ]]; then
+  swallow pip install pylint
+fi
 
 # Patch init scripts for bash and zsh
 SHELL_CHANGED=
