@@ -218,7 +218,7 @@ class AliDock(object):
             except AliDockError as exc:
                 caught = exc
 
-            if not nagOnUpdate:
+            if not updateAvail or not nagOnUpdate:
                 try:
                     os.makedirs(tsDir)
                 except OSError as exc:
