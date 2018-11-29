@@ -36,11 +36,12 @@ class AliDock(object):
         self.cli = docker.from_env()
         self.dirInside = "/home/alidock"
         self.conf = {
-            "dockName"        : "alidock",
-            "imageName"       : "alisw/alidock:latest",
-            "dirOutside"      : "~/alidock",
-            "updatePeriod"    : 43200,
-            "dontUpdateImage" : False
+            "dockName"         : "alidock",
+            "imageName"        : "alisw/alidock:latest",
+            "dirOutside"       : "~/alidock",
+            "updatePeriod"     : 43200,
+            "dontUpdateImage"  : False,
+            "useNvidiaRuntime" : False
         }
         self.parseConfig()
         self.overrideConfig(overrideConf)
@@ -141,14 +142,24 @@ class AliDock(object):
             nul = open(os.devnull, "w")
             subprocess.check_call(initOutsideShPath, stdout=nul, stderr=nul)
         except subprocess.CalledProcessError:
-            raise AliDockError("fatal error running the host initialization script: "
+            raise AliDockError("the host initialization script failed, "
                                "check {log}".format(
                                    log=os.path.join(self.conf["dirOutside"], ".alidock-host.log")))
+
+        dockEnvironment = []
+        dockRuntime = None
 
         # Define which mounts to expose to the container. On non-Linux, we need a native volume too
         dockMounts = [Mount(self.dirInside, outDir, type="bind", consistency="cached")]
         if platform.system() != "Linux":
             dockMounts.append(Mount("/persist", "persist-"+self.conf["dockName"], type="volume"))
+
+        if self.conf["useNvidiaRuntime"]:
+            if self.hasRuntime("nvidia"):
+                dockRuntime = "nvidia"
+                dockEnvironment = ["NVIDIA_VISIBLE_DEVICES=all"]
+            else:
+                raise AliDockError("cannot find the NVIDIA runtime in your Docker installation")
 
         # Start container with that script
         self.cli.containers.run(self.conf["imageName"],
@@ -158,7 +169,9 @@ class AliDock(object):
                                 cap_add=["SYS_PTRACE"],
                                 name=self.conf["dockName"],
                                 mounts=dockMounts,
-                                ports={"22/tcp": None})  # None == random port
+                                ports={"22/tcp": None}, # None == random port
+                                runtime=dockRuntime,
+                                environment=dockEnvironment)
 
         return True
 
@@ -173,6 +186,9 @@ class AliDock(object):
             self.cli.images.pull(self.conf["imageName"])
         except docker.errors.APIError as exc:
             raise AliDockError(str(exc))
+
+    def hasRuntime(self, runtime):
+        return runtime in self.cli.info()["Runtimes"].keys()
 
     def hasUpdates(self, stateFileRelative, updatePeriod, nagOnUpdate, updateFunc):
         """Generic function that checks for updates every updatePeriod seconds, saving the state
@@ -291,9 +307,12 @@ def entrypoint():
                       help="Override host path of persistent home [dirOutside]")
     argp.add_argument("--update-period", dest="updatePeriod", default=None,
                       help="Override update check period [updatePeriod]")
-    argp.add_argument("--no-update-image", dest="dontUpdateImage", default=False,
+    argp.add_argument("--no-update-image", dest="dontUpdateImage", default=None,
                       action="store_true",
                       help="Do not update the Docker image [dontUpdateImage]")
+    argp.add_argument("--nvidia", dest="useNvidiaRuntime", default=None,
+                      action="store_true",
+                      help="Launch container using the NVIDIA Docker runtime [useNvidiaRuntime]")
 
     argp.add_argument("action", default="enter", nargs="?",
                       choices=["enter", "root", "exec", "start", "status", "stop"],
