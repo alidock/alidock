@@ -405,7 +405,7 @@ def processActions(args):
         if aliDock.hasClientUpdates():
             LOG.error("You are using an obsolete version of alidock.")
             LOG.error("Upgrade NOW with:")
-            LOG.error("    pip install alidock --upgrade")
+            LOG.error("    bash <(curl -fsSL https://bit.ly/alidock-installer)")
     except AliDockError:
         LOG.warning("Cannot check for alidock updates this time")
 
