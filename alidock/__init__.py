@@ -142,7 +142,7 @@ class AliDock(object):
             nul = open(os.devnull, "w")
             subprocess.check_call(initOutsideShPath, stdout=nul, stderr=nul)
         except subprocess.CalledProcessError:
-            raise AliDockError("fatal error running the host initialization script: "
+            raise AliDockError("the host initialization script failed, "
                                "check {log}".format(
                                    log=os.path.join(self.conf["dirOutside"], ".alidock-host.log")))
 
@@ -160,7 +160,7 @@ class AliDock(object):
                 dockRuntime = "nvidia"
                 dockEnvironment = ["NVIDIA_VISIBLE_DEVICES=all"]
             else:
-                raise AliDockError("fatal error: can't find nvidia runtime in your docker")
+                raise AliDockError("cannot find the nvidia runtime in your Docker installation")
 
         # Start container with that script
         self.cli.containers.run(self.conf["imageName"],
