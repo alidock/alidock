@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
 # alidock-installer -- simplify the installation of alidock
 #
