@@ -200,6 +200,7 @@ class AliDock(object):
            state file should not be updated in order to trigger another check at the next run (this
            nags users until they update)."""
 
+        LOG.debug("Checking for updates: %s" % stateFileRelative)
         tsDir = os.path.expanduser(self.conf["dirOutside"])
         tsFn = os.path.join(tsDir, stateFileRelative)
         try:
@@ -212,13 +213,16 @@ class AliDock(object):
         updateAvail = False
         if now - lastUpdate > int(updatePeriod):
 
+            LOG.debug("We have to check: %s" % stateFileRelative)
             caught = None
             try:
                 updateAvail = updateFunc()
+                LOG.debug("avail: %s" % updateAvail)
             except AliDockError as exc:
                 caught = exc
 
             if not updateAvail or not nagOnUpdate:
+                LOG.debug("write statefile %s" % stateFileRelative)
                 try:
                     os.makedirs(tsDir)
                 except OSError as exc:
