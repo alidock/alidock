@@ -33,6 +33,10 @@ while [[ $# -gt 0 ]]; do
     git) MODE=git ;;
     devel) MODE=devel ;;
     --no-check-docker) CHECK_DOCKER= ;;
+    --quiet)
+      function pinfo() { :; }
+      function pwarn() { :; }
+    ;;
     --help)
       pinfo "alidock-installer: install alidock in a Python virtualenv"
       pinfo ""
@@ -48,10 +52,6 @@ while [[ $# -gt 0 ]]; do
       pwarn "    --no-check-docker            # don't check if Docker works"
       pwarn "    --quiet                      # suppress messages (except errors)"
       exit 1
-    ;;
-    --quiet)
-      function pinfo() { :; }
-      function pwarn() { :; }
     ;;
     -*)
       perr "Unknown option: $1"
@@ -73,7 +73,7 @@ fi
 # Check if Docker is there and user can use it
 if [[ $CHECK_DOCKER ]]; then
   pinfo "Checking if your Docker installation works"
-  swallow docker run hello-world
+  swallow docker run -it --rm hello-world
 fi
 
 cd /
