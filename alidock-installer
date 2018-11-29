@@ -24,9 +24,6 @@ function swallow() {
   return $ERR
 }
 
-cd /
-rm -rf "$VENV_DEST"  # always start from scratch
-
 # Favour `python3`, fall back on `python`
 PYTHON_BIN=python3
 type "$PYTHON_BIN" &> /dev/null || PYTHON_BIN=python
@@ -35,9 +32,16 @@ if ! type "$PYTHON_BIN" &> /dev/null; then
   exit 1
 fi
 
+# Check if Docker is there and user can use it
+pinfo "Checking if your Docker installation works"
+swallow docker run hello-world
+
+cd /
+
 pushd "$TMPDIR" &> /dev/null
   pinfo "Creating an environment for alidock using $("$PYTHON_BIN" --version 2>&1 | grep Python) ("$PYTHON_BIN")"
   curl -Lso - https://github.com/pypa/virtualenv/tarball/${VIRTUALENV_VERSION} | tar xzf -
+  rm -rf "$VENV_DEST"  # always start from scratch
   swallow "$PYTHON_BIN" pypa-virtualenv-*/src/virtualenv.py "$VENV_DEST"
 popd &> /dev/null
 
