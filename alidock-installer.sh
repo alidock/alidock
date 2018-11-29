@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-# alidock-installer -- simplify the installation of alidock
+# alidock-installer.sh -- simplify the installation of alidock
 #
 # This Bash script simplifies the installation of alidock by using a Python
 # virtualenv. We make sure we are using our own isolated Python environment for
@@ -38,15 +38,15 @@ while [[ $# -gt 0 ]]; do
       function pwarn() { :; }
     ;;
     --help)
-      pinfo "alidock-installer: install alidock in a Python virtualenv"
+      pinfo "alidock-installer.sh: install alidock in a Python virtualenv"
       pinfo ""
       pinfo "Normal usage:"
-      pinfo "    alidock-installer            # use this if in doubt!"
+      pinfo "    alidock-installer.sh            # use this if in doubt!"
       pinfo ""
       pwarn "Advanced usage:"
-      pwarn "    alidock-installer git        # install latest version from Git"
-      pwarn "    alidock-installer devel      # install local development version"
-      pwarn "    alidock-installer <version>  # install specific version from PyPI"
+      pwarn "    alidock-installer.sh git        # install latest version from Git"
+      pwarn "    alidock-installer.sh devel      # install local development version"
+      pwarn "    alidock-installer.sh <version>  # install specific version from PyPI"
       pwarn ""
       pwarn "Parameters:"
       pwarn "    --no-check-docker            # don't check if Docker works"
