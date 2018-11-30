@@ -11,19 +11,25 @@ TMPDIR=$(mktemp -d /tmp/alidock-installer-XXXXX)
 VENV_DEST="$HOME/.virtualenvs/alidock"
 PROG_DIR=$(cd "$(dirname "$0")"; pwd)
 
-function pinfo() { echo -e "\033[32m${1}\033[m"; }
-function pwarn() { echo -e "\033[33m${1}\033[m"; }
-function perr() { echo -e "\033[31m${1}\033[m"; }
+function pinfo() { echo -e "\033[32m${1}\033[m" >&2; }
+function pwarn() { echo -e "\033[33m${1}\033[m" >&2; }
+function perr() { echo -e "\033[31m${1}\033[m" >&2; }
 function swallow() {
   local ERR=0
   "$@" &> "$TMPDIR/log" || ERR=$?
   if [[ $ERR != 0 ]]; then
-    cat "$TMPDIR/log"
+    perr "+ $*"
+    cat "$TMPDIR/log" >&2
   else
     rm -f "$TMPDIR/log"
   fi
   return $ERR
 }
+
+if [[ $(id -u) == 0 ]]; then
+  perr "Refusing to continue the installation as root"
+  exit 5
+fi
 
 # Check parameters
 MODE=default
@@ -67,7 +73,7 @@ PYTHON_BIN=python3
 type "$PYTHON_BIN" &> /dev/null || PYTHON_BIN=python
 if ! type "$PYTHON_BIN" &> /dev/null; then
   perr "It appears Python is not available on your system: cannot continue"
-  exit 1
+  exit 3
 fi
 
 # Check if Docker is there and user can use it
@@ -96,8 +102,8 @@ case "$MODE" in
   devel)
     URL="$PROG_DIR"
     if [[ ! -f "$URL/setup.py" ]]; then
-      perr "Execute the installer from the development directory $URL"
-      exit 1
+      perr "You did not execute the installer from the development directory"
+      exit 4
     fi
     DEVEL="-e"
   ;;
