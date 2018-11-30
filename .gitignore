@@ -2,3 +2,4 @@ alidock.egg-info
 *.pyc
 *.swp
 /dist
+.vscode
