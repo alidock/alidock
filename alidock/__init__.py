@@ -86,7 +86,8 @@ class AliDock(object):
         return ["ssh", "localhost", "-p", str(sshPort), "-Y", "-F/dev/null",
                 "-oForwardX11Trusted=no", "-oUserKnownHostsFile=/dev/null", "-oLogLevel=QUIET",
                 "-oStrictHostKeyChecking=no", "-oForwardX11Timeout=596h",
-                "-i", os.path.join(os.path.expanduser(self.conf["dirOutside"]), ".alidock-ssh", "alidock.pem")]
+                "-i", os.path.join(os.path.expanduser(self.conf["dirOutside"]),
+                ".alidock-ssh", "alidock.pem")]
 
     def waitSshUp(self):
         for _ in range(0, 50):
