@@ -16,6 +16,10 @@ script: |
   set -e
   set -o pipefail
   ci/run-tests.sh
+branches:
+  only:
+    - master
+    - /^v\d+\.\d+(\.\d+)?(-rc\d+)?$/
 env:
   global:
   # PYPI_PASSWORD
