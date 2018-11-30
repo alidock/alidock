@@ -171,11 +171,12 @@ class AliDock(object):
                                 detach=True,
                                 auto_remove=True,
                                 cap_add=["SYS_PTRACE"],
+                                environment=dockEnvironment,
+                                hostname=self.conf["dockName"],
                                 name=self.conf["dockName"],
                                 mounts=dockMounts,
                                 ports={"22/tcp": None}, # None == random port
-                                runtime=dockRuntime,
-                                environment=dockEnvironment)
+                                runtime=dockRuntime)
 
         return True
 
