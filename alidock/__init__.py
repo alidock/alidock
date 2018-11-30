@@ -5,6 +5,7 @@ import argparse
 from argparse import ArgumentParser
 from pwd import getpwuid
 from time import time, sleep
+from datetime import datetime as dt
 import errno
 import os
 import os.path
@@ -260,12 +261,17 @@ class AliDock(object):
 
         def updateFunc():
             try:
-                pypaData = requests.get("https://pypi.org/pypi/{pkg}/json".format(pkg=__package__),
-                                        timeout=5)
-                pypaData.raise_for_status()
-                availVersion = parse_version(pypaData.json()["info"]["version"])
+                pyr = requests.get("https://pypi.org/pypi/{pkg}/json".format(pkg=__package__),
+                                   timeout=5)
+                pyr.raise_for_status()
+                pypiData = pyr.json()
+                availVersion = parse_version(pypiData["info"]["version"])
                 localVersion = parse_version(require(__package__)[0].version)
-                if availVersion > localVersion:
+                uploadTimeUTC = pypiData["releases"][str(availVersion)][0]["upload_time"]
+                uploadTimeUTC = dt.strptime(uploadTimeUTC, "%Y-%m-%dT%H:%M:%S")
+                updateAge = (dt.utcnow() - uploadTimeUTC).total_seconds()
+                if availVersion > localVersion and updateAge > 900:
+                    # Update is at least 15 min old to allow all PyPI caches to sync
                     return True
             except (RequestException, ValueError) as exc:
                 raise AliDockError(str(exc))
@@ -304,16 +310,17 @@ class AliDock(object):
 
 def entrypoint():
     argp = ArgumentParser()
-    argp.add_argument("--quiet", dest="quiet", default=False, action="store_true",
+    argp.add_argument("--quiet", "-q", dest="quiet", default=False, action="store_true",
                       help="Do not print any message")
-    argp.add_argument("--version", dest="version", default=False, action="store_true",
+    argp.add_argument("--version", "-v", dest="version", default=False, action="store_true",
                       help="Print current alidock version on stdout")
 
     # tmux: both normal and terminal integration ("control mode")
     tmuxArgs = argp.add_mutually_exclusive_group()
-    tmuxArgs.add_argument("--tmux", dest="tmux", default=False, action="store_true",
+    tmuxArgs.add_argument("--tmux", "-t", dest="tmux", default=False, action="store_true",
                           help="Start or resume a detachable tmux session")
-    tmuxArgs.add_argument("--tmux-control", dest="tmuxControl", default=False, action="store_true",
+    tmuxArgs.add_argument("--tmux-control", "-T", dest="tmuxControl", default=False,
+                          action="store_true",
                           help="Start or resume a detachable tmux session in control mode "
                                "(integration with your terminal)")
 
