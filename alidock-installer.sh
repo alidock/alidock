@@ -6,6 +6,9 @@
 # virtualenv. We make sure we are using our own isolated Python environment for
 # it, and it should work seamlessly without being root.
 
+set -e
+set -o pipefail
+
 VIRTUALENV_VERSION=16.1.0
 TMPDIR=$(mktemp -d /tmp/alidock-installer-XXXXX)
 VENV_DEST="$HOME/.virtualenvs/alidock"
