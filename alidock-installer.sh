@@ -10,9 +10,8 @@ set -e
 set -o pipefail
 
 VIRTUALENV_VERSION=16.1.0
+CONFIG_FILE="$HOME/.alidock"
 TMPDIR=$(mktemp -d /tmp/alidock-installer-XXXXX)
-VENV_DEST="$HOME/.virtualenvs/alidock"
-PROG_DIR=$(cd "$(dirname "$0")"; pwd)
 
 function pinfo() { echo -e "\033[32m${1}\033[m" >&2; }
 function pwarn() { echo -e "\033[33m${1}\033[m" >&2; }
@@ -37,29 +36,49 @@ fi
 # Check parameters
 MODE=default
 CHECK_DOCKER=1
+
+# read alidock properties file ($CONFIG_FILE) if it is exists or create a new one with default properties
+if [ -f "$CONFIG_FILE" ]; then
+  while IFS='=' read -r key value; do
+    key=$(echo $key | tr '.' '_')
+    eval ${key}=\${value}
+  done < "$CONFIG_FILE"
+else
+  VENV_DEST="$HOME/.virtualenvs/alidock"
+  PROG_DIR=$(cd "$(dirname "$0")"; pwd)
+fi
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     git) MODE=git ;;
     devel) MODE=devel ;;
     --no-check-docker) CHECK_DOCKER= ;;
-    --quiet)
+    --quiet | -q)
       function pinfo() { :; }
       function pwarn() { :; }
     ;;
+    --venv=*)
+      VENV_DEST="${1#*=}"
+    ;;
+    --path=*)
+      PROG_DIR="${1#*=}"
+      ;;
     --help)
       pinfo "alidock-installer.sh: install alidock in a Python virtualenv"
       pinfo ""
       pinfo "Normal usage:"
-      pinfo "    alidock-installer.sh            # use this if in doubt!"
+      pinfo "    alidock-installer.sh                 # use this if in doubt!"
       pinfo ""
       pwarn "Advanced usage:"
-      pwarn "    alidock-installer.sh git        # install latest version from Git"
-      pwarn "    alidock-installer.sh devel      # install local development version"
-      pwarn "    alidock-installer.sh <version>  # install specific version from PyPI"
+      pwarn "    alidock-installer.sh git             # install latest version from Git"
+      pwarn "    alidock-installer.sh devel           # install local development version"
+      pwarn "    alidock-installer.sh <version>       # install specific version from PyPI"
       pwarn ""
       pwarn "Parameters:"
-      pwarn "    --no-check-docker            # don't check if Docker works"
-      pwarn "    --quiet                      # suppress messages (except errors)"
+      pwarn "    --venv=[virtual_environment_path]    # don't check if Docker works"      
+      pwarn "    --path=[alidock_path]                # don't check if Docker works"
+      pwarn "    --no-check-docker                    # don't check if Docker works"
+      pwarn "    --quiet                              # suppress messages (except errors)"
       exit 1
     ;;
     -*)
@@ -70,6 +89,9 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
+
+echo "VENV_DEST="${VENV_DEST} > ${CONFIG_FILE}
+echo "PROG_DIR="${PROG_DIR} >> ${CONFIG_FILE}
 
 # Favour `python3`, fall back on `python`
 PYTHON_BIN=python3
