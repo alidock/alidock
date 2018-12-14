@@ -142,7 +142,14 @@ fi
 
 # Patch init scripts for bash and zsh
 SHELL_CHANGED=
-for SHELLRC in $HOME/.bashrc $HOME/.bash_profile $HOME/.zshrc; do
+CURRENT_SHELL="$SHELL"
+case "$CURRENT_SHELL" in
+  /bin/bash) SHELLRCS="$HOME/.bashrc" ;;
+  /bin/zsh)  SHELLRCS="$HOME/.zshrc" ;;
+  *)         SHELLRCS="$HOME/.bashrc $HOME/.zshrc" ;;
+esac
+
+for SHELLRC in $SHELLRCS; do
   if ! grep -q 'function alidock()' "$SHELLRC" &> /dev/null; then
     pinfo "Adding alidock to $SHELLRC"
     touch "$SHELLRC"
