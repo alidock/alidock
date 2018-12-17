@@ -22,6 +22,7 @@ import requests
 from requests.exceptions import RequestException
 from pkg_resources import resource_string, parse_version, require
 from alidock.log import Log
+from alidock.util import splitEsc
 
 LOG = Log()
 
@@ -44,7 +45,8 @@ class AliDock(object):
             "updatePeriod"      : 43200,
             "dontUpdateImage"   : False,
             "dontUpdateAlidock" : False,
-            "useNvidiaRuntime"  : False
+            "useNvidiaRuntime"  : False,
+            "mount"             : []
         }
         self.parseConfig()
         self.overrideConfig(overrideConf)
@@ -107,6 +109,28 @@ class AliDock(object):
     def rootShell(self):
         os.execvp("docker", ["docker", "exec", "-it", self.conf["dockName"], "/bin/bash"])
 
+    def getUserMounts(self):
+        dockMounts = []
+        for mount in self.conf["mount"]:
+            src, label, mode = splitEsc(mount, ":", 2)
+            src = os.path.expanduser(src)
+            if os.path.isfile(src):
+                raise AliDockError("mount {src} is a file: only dirs allowed".format(src=src))
+            if not label:
+                label = os.path.basename(src)
+            elif "/" in label or label in [".", ".."]:
+                raise AliDockError("mount label {label} is invalid: label cannot contain a slash"
+                                   "and cannot be equal to \"..\" or \".\"".format(label=label))
+            mnt = os.path.join("/", "mnt", label)
+            if not mode:
+                mode = "rw"
+            if mode not in ["rw", "ro"]:
+                raise AliDockError("supported modes for mounts are \"rw\" and \"ro\", "
+                                   "not {mode}".format(mode=mode))
+            dockMounts.append(Mount(mnt, src, type="bind", read_only=(mode == "ro"),
+                                    consistency="cached"))
+        return dockMounts
+
     def run(self):
         # Create directory to be shared with the container
         outDir = os.path.expanduser(self.conf["dirOutside"])
@@ -157,6 +181,8 @@ class AliDock(object):
         dockMounts = [Mount(self.dirInside, outDir, type="bind", consistency="cached")]
         if platform.system() != "Linux":
             dockMounts.append(Mount("/persist", "persist-"+self.conf["dockName"], type="volume"))
+
+        dockMounts += self.getUserMounts()  # user-defined mounts
 
         if self.conf["useNvidiaRuntime"]:
             if self.hasRuntime("nvidia"):
@@ -333,6 +359,9 @@ def entrypoint():
                       help="Override default image name [imageName]")
     argp.add_argument("--shared", dest="dirOutside", default=None,
                       help="Override host path of persistent home [dirOutside]")
+    argp.add_argument("--mount", dest="mount", default=None, nargs="+",
+                      help="Host directories to mount under /mnt inside alidock, in the format "
+                           "/external/path[:label[:[rw|ro]]] [mount]")
     argp.add_argument("--update-period", dest="updatePeriod", default=None,
                       help="Override update check period [updatePeriod]")
     argp.add_argument("--no-update-image", dest="dontUpdateImage", default=None,
