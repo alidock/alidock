@@ -46,7 +46,8 @@ class AliDock(object):
             "dontUpdateImage"   : False,
             "dontUpdateAlidock" : False,
             "useNvidiaRuntime"  : False,
-            "mount"             : []
+            "mount"             : [],
+            "cvmfs"             : False
         }
         self.parseConfig()
         self.overrideConfig(overrideConf)
@@ -181,6 +182,12 @@ class AliDock(object):
         dockMounts = [Mount(self.dirInside, outDir, type="bind", consistency="cached")]
         if platform.system() != "Linux":
             dockMounts.append(Mount("/persist", "persist-"+self.conf["dockName"], type="volume"))
+
+        if self.conf["cvmfs"]:
+            dockMounts.append(Mount(source="/cvmfs",
+                                    target="/cvmfs",
+                                    type="bind",
+                                    propagation="shared" if platform.system() == "Linux" else None))
 
         dockMounts += self.getUserMounts()  # user-defined mounts
 
@@ -373,6 +380,9 @@ def entrypoint():
     argp.add_argument("--nvidia", dest="useNvidiaRuntime", default=None,
                       action="store_true",
                       help="Launch container using the NVIDIA Docker runtime [useNvidiaRuntime]")
+    argp.add_argument("--cvmfs", dest="cvmfs", default=None,
+                      action="store_true",
+                      help="Mount CVMFS inside the container [cvmfs]")
 
     argp.add_argument("action", default="enter", nargs="?",
                       choices=["enter", "root", "exec", "start", "status", "stop"],
@@ -380,6 +390,7 @@ def entrypoint():
 
     argp.add_argument("shellCmd", nargs=argparse.REMAINDER,
                       help="Command to execute in the container (works with exec)")
+
 
     args = argp.parse_args()
 
