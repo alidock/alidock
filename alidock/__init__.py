@@ -71,11 +71,13 @@ class AliDock(object):
                 self.conf[k] = override[k]
 
     def isRunning(self):
+        runStatus = {}
         try:
-            self.cli.containers.get(self.conf["dockName"])
+            runContainer = self.cli.containers.get(self.conf["dockName"])
+            runStatus["image"] = runContainer.image.attrs["RepoTags"][0]
         except docker.errors.NotFound:
-            return False
-        return True
+            pass
+        return runStatus
 
     def getSshCommand(self):
         try:
@@ -448,8 +450,9 @@ def processEnterStart(aliDock, args):
         LOG.info("Container is already running")
 
 def processStatus(aliDock):
-    if aliDock.isRunning():
-        LOG.info("Container is running")
+    runStatus = aliDock.isRunning()
+    if runStatus:
+        LOG.info("Container is running ({image})".format(image=runStatus["image"]))
         exit(0)
     LOG.error("Container is not running")
     exit(1)
