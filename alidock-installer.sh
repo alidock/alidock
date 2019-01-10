@@ -9,7 +9,7 @@
 set -e
 set -o pipefail
 
-VIRTUALENV_VERSION=16.1.0
+VIRTUALENV_VERSION=16.2.0
 TMPDIR=$(mktemp -d /tmp/alidock-installer-XXXXX)
 VENV_DEST="$HOME/.virtualenvs/alidock"
 PROG_DIR=$(cd "$(dirname "$0")"; pwd)
@@ -88,10 +88,13 @@ fi
 cd /
 
 pushd "$TMPDIR" &> /dev/null
-  pinfo "Creating an environment for alidock using $("$PYTHON_BIN" --version 2>&1 | grep Python) ("$PYTHON_BIN")"
+  PYTHON_INFO="$("$PYTHON_BIN" --version 2>&1 | grep Python) ("$PYTHON_BIN")"
+  pinfo "Creating an environment for alidock using $PYTHON_INFO and virtualenv $VIRTUALENV_VERSION"
   curl -Lso - https://github.com/pypa/virtualenv/tarball/${VIRTUALENV_VERSION} | tar xzf -
   rm -rf "$VENV_DEST"  # always start from scratch
-  swallow "$PYTHON_BIN" pypa-virtualenv-*/src/virtualenv.py "$VENV_DEST"
+  VIRTUALENV_BIN=$(echo pypa-virtualenv-*/virtualenv.py)
+  [[ -e $VIRTUALENV_BIN ]] || VIRTUALENV_BIN=$(echo pypa-virtualenv-*/src/virtualenv.py)
+  swallow "$PYTHON_BIN" "$VIRTUALENV_BIN" "$VENV_DEST"
 popd &> /dev/null
 
 pinfo "Installing alidock under $VENV_DEST"
