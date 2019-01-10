@@ -10,6 +10,7 @@ set -e
 set -o pipefail
 
 VIRTUALENV_VERSION=16.2.0
+[[ $(uname) != Linux ]] || VIRTUALENV_VERSION=16.0.0  # pypa/virtualenv#1270
 TMPDIR=$(mktemp -d /tmp/alidock-installer-XXXXX)
 VENV_DEST="$HOME/.virtualenvs/alidock"
 PROG_DIR=$(cd "$(dirname "$0")"; pwd)
