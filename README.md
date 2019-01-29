@@ -10,6 +10,8 @@ then:
 
     bash <(curl -fsSL https://bit.ly/alidock-installer)
 
+Windows users can [install the package with pip](https://pypi.org/pypi/alidock) instead.
+
 You may need to close and reopen your terminal as advised. Run alidock now:
 
     alidock

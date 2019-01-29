@@ -3,10 +3,11 @@
 from __future__ import print_function
 import argparse
 from argparse import ArgumentParser
-from pwd import getpwuid
 from time import time, sleep
 from datetime import datetime as dt
+from io import open
 import errno
+import re
 import os
 import os.path
 import sys
@@ -22,7 +23,7 @@ import requests
 from requests.exceptions import RequestException
 from pkg_resources import resource_string, parse_version, require
 from alidock.log import Log
-from alidock.util import splitEsc
+from alidock.util import splitEsc, getUserId, execReturn
 
 LOG = Log()
 
@@ -38,10 +39,11 @@ class AliDock(object):
     def __init__(self, overrideConf=None):
         self.cli = docker.from_env()
         self.dirInside = "/home/alidock"
+        self.userName = re.sub("[^0-9a-z_-]", "_", os.getlogin().lower())
         self.conf = {
             "dockName"          : "alidock",
             "imageName"         : "alisw/alidock:latest",
-            "dirOutside"        : "~/alidock",
+            "dirOutside"        : os.path.join("~", "alidock"),
             "updatePeriod"      : 43200,
             "dontUpdateImage"   : False,
             "dontUpdateAlidock" : False,
@@ -52,7 +54,7 @@ class AliDock(object):
         self.parseConfig()
         self.overrideConfig(overrideConf)
         self.conf["dockName"] = "{dockName}-{userId}".format(dockName=self.conf["dockName"],
-                                                             userId=os.getuid())
+                                                             userId=getUserId())
 
     def parseConfig(self):
         confFile = os.path.expanduser("~/.alidock-config.yaml")
@@ -88,7 +90,7 @@ class AliDock(object):
             raise AliDockError("cannot find container, maybe it did not start up properly: "
                                "check log file {outLog} for details. Error: {msg}"
                                .format(outLog=outLog, msg=exc))
-        return ["ssh", "localhost", "-p", str(sshPort), "-Y", "-F/dev/null",
+        return ["ssh", "localhost", "-p", str(sshPort), "-Y", "-F/dev/null", "-l", self.userName,
                 "-oForwardX11Trusted=no", "-oUserKnownHostsFile=/dev/null", "-oLogLevel=QUIET",
                 "-oStrictHostKeyChecking=no", "-oForwardX11Timeout=596h",
                 "-i", os.path.join(os.path.expanduser(self.conf["dirOutside"]),
@@ -107,10 +109,13 @@ class AliDock(object):
         return False
 
     def shell(self, cmd=None):
-        os.execvp("ssh", self.getSshCommand() + (cmd if cmd else []))
+        if platform.system() == "Windows" and "DISPLAY" not in os.environ:
+            # On Windows if no DISPLAY environment is set we assume a sensible default
+            os.environ["DISPLAY"] = "127.0.0.1:0.0"
+        execReturn("ssh", self.getSshCommand() + (cmd if cmd else []))
 
     def rootShell(self):
-        os.execvp("docker", ["docker", "exec", "-it", self.conf["dockName"], "/bin/bash"])
+        execReturn("docker", ["docker", "exec", "-it", self.conf["dockName"], "/bin/bash"])
 
     def getUserMounts(self):
         dockMounts = []
@@ -134,6 +139,34 @@ class AliDock(object):
                                     consistency="cached"))
         return dockMounts
 
+    def initDarwin(self):
+        # macOS only: exclude "sw" directory from indexing and backup
+        outDir = os.path.expanduser(self.conf["dirOutside"])
+        swDir = os.path.join(outDir, ".sw")
+        swNoidx = os.path.join(outDir, ".sw.noindex")
+        if os.path.isdir(swDir) and not os.path.islink(swDir) and not os.path.exists(swNoidx):
+            # An old installation uses .sw: rename to .sw.noindex
+            os.rename(swDir, swNoidx)
+        try:
+            # Create .sw.noindex (not indexed by Spotlight because of `.noindex`)
+            os.mkdir(swNoidx)
+        except OSError as exc:
+            if not os.path.isdir(swNoidx) or exc.errno != errno.EEXIST:
+                raise AliDockError("cannot create {dir}".format(dir=swNoidx))
+        try:
+            # Symlink .sw -> .sw.noindex
+            os.symlink(".sw.noindex", swDir)
+        except OSError as exc:
+            if not os.path.islink(swDir) or exc.errno != errno.EEXIST:
+                raise AliDockError("cannot symlink .sw -> .sw.noindex %s" % str(exc))
+        try:
+            # Exclude .sw.noindex from Time Machine backups (check with `xattr`)
+            nul = open(os.devnull, "w")
+            subprocess.check_call(["tmutil", "addexclusion", swNoidx], stdout=nul, stderr=nul)
+        except subprocess.CalledProcessError as exc:
+            raise AliDockError("cannot exclude {dir} from Time Machine backups, "
+                               "tmutil returned {ret}".format(dir=swNoidx, ret=exc.returncode))
+
     def run(self):
         # Create directory to be shared with the container
         outDir = os.path.expanduser(self.conf["dirOutside"])
@@ -144,38 +177,19 @@ class AliDock(object):
                 raise AliDockError("cannot create directory {dir} to share with container, "
                                    "check permissions".format(dir=self.conf["dirOutside"]))
 
-        # Create initialization scripts: one runs outside the container, the other inside
-        userId = os.getuid()
-        userName = getpwuid(userId).pw_name
-
         initShPath = os.path.join(outDir, ".alidock-init.sh")
         initSh = jinja2.Template(
-            resource_string("alidock.helpers", "init-inside.sh.j2").decode("utf-8"))
-        with open(initShPath, "w") as fil:
+            resource_string("alidock.helpers", "init.sh.j2").decode("utf-8"))
+        with open(initShPath, "w", newline="\n") as fil:
             fil.write(initSh.render(logFile=".alidock.log",
                                     sharedDir=self.dirInside,
                                     dockName=self.conf["dockName"].rsplit("-", 1)[0],
-                                    userName=userName,
-                                    userId=userId))
+                                    userName=self.userName,
+                                    userId=getUserId()))
         os.chmod(initShPath, 0o700)
 
-        initOutsideShPath = os.path.join(outDir, ".alidock-init-host.sh")
-        initOutsideSh = jinja2.Template(
-            resource_string("alidock.helpers", "init-outside.sh.j2").decode("utf-8"))
-        with open(initOutsideShPath, "w") as fil:
-            fil.write(initOutsideSh.render(operatingSystem=platform.system(),
-                                           logFile=".alidock-host.log",
-                                           alidockDir=os.path.expanduser(self.conf["dirOutside"])))
-        os.chmod(initOutsideShPath, 0o700)
-
-        # Execute the script on the host immediately: errors are fatal
-        try:
-            nul = open(os.devnull, "w")
-            subprocess.check_call(initOutsideShPath, stdout=nul, stderr=nul)
-        except subprocess.CalledProcessError:
-            raise AliDockError("the host initialization script failed, "
-                               "check {log}".format(
-                                   log=os.path.join(self.conf["dirOutside"], ".alidock-host.log")))
+        if platform.system() == "Darwin":
+            self.initDarwin()
 
         dockEnvironment = []
         dockRuntime = None
@@ -202,7 +216,7 @@ class AliDock(object):
 
         # Start container with that script
         self.cli.containers.run(self.conf["imageName"],
-                                command=[os.path.join(self.dirInside, ".alidock-init.sh")],
+                                command=[self.dirInside + "/.alidock-init.sh"],  # no os.path.join
                                 detach=True,
                                 auto_remove=True,
                                 cap_add=["SYS_PTRACE"],
@@ -470,13 +484,17 @@ def processActions(args):
         print("{prog} {version}".format(prog=__package__, version=ver))
         return
 
-    if os.getuid() == 0:
+    if getUserId() == 0:
         raise AliDockError("refusing to execute as root: use an unprivileged user account")
 
     aliDock = AliDock(args.__dict__)
 
     try:
-        if not aliDock.conf["dontUpdateAlidock"] and aliDock.hasClientUpdates():
+        hasUpdates = aliDock.hasClientUpdates()
+        if hasUpdates and platform.system() == "Windows":
+            # No auto update on Windows at the moment
+            LOG.error("You are using an obsolete version of alidock. Use pip to upgrade it.")
+        elif hasUpdates and not aliDock.conf["dontUpdateAlidock"]:
             aliDock.doAutoUpdate()
             LOG.error("You are using an obsolete version of alidock.")
             LOG.error("Upgrade NOW with:")

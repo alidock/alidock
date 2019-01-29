@@ -1,3 +1,9 @@
+import os
+import sys
+import platform
+from subprocess import call
+from hashlib import md5
+
 def splitEsc(inp, delim, nDelim):
     """Splits input string inp with nDelim delimiters. Returns a tuple of nDelim+1 components: some
        components may be empty if not enough separators are found. Use the backslash to escape the
@@ -21,3 +27,30 @@ def splitEsc(inp, delim, nDelim):
     if nDelim > 1:
         return (first,) + splitEsc(remainder, delim, nDelim-1)
     return (first, remainder)
+
+if hasattr(os, "getuid"):
+    USERID = os.getuid()  # pylint: disable=no-member
+else:
+    HASH = md5()
+    HASH.update(os.getlogin().encode())
+    USERID = 10000 + int(HASH.hexdigest()[2:5], 16)
+    del HASH
+
+def getUserId():
+    """Return the current user's numeric identifier according to the operating system. When the
+    appropriate system method is not available, a unique identifier is computed out of the user
+    login name."""
+    return USERID
+
+if platform.system() == "Windows":
+    def execReturn(_, args):
+        """Executes the given program on Windows (no process substitution) and exits with the
+        appropriate status code."""
+        ret = call(args)
+        if ret < 0:  # fatal signal
+            ret = 128 + ret
+        sys.exit(ret)
+else:
+    def execReturn(progName, args):
+        """Executes the given progName with the given args by replacing the current process."""
+        os.execvp(progName, args)
