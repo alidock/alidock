@@ -15,6 +15,8 @@ TMPDIR=$(mktemp -d /tmp/alidock-installer-XXXXX)
 VENV_DEST="$HOME/.virtualenvs/alidock"
 PROG_DIR=$(cd "$(dirname "$0")"; pwd)
 
+cd /
+
 function pinfo() { echo -e "\033[32m${1}\033[m" >&2; }
 function pwarn() { echo -e "\033[33m${1}\033[m" >&2; }
 function perr() { echo -e "\033[31m${1}\033[m" >&2; }
@@ -80,13 +82,21 @@ if ! type "$PYTHON_BIN" &> /dev/null; then
   exit 3
 fi
 
+# Check if Python distutils is available (otherwise virtualenv will fail)
+if ! "$PYTHON_BIN" -c 'import distutils.spawn' &> /dev/null; then
+  perr "Your Python installation using $PYTHON_BIN seems incomplete: distutils is missing"
+  if [[ $(uname) == Linux && -x /usr/bin/apt-get && "$PYTHON_BIN" == *python3 ]]; then
+    perr "Try installing it with:"
+    perr "  sudo apt-get update && sudo apt-get install python3-distutils"
+  fi
+  exit 6
+fi
+
 # Check if Docker is there and user can use it
 if [[ $CHECK_DOCKER ]]; then
   pinfo "Checking if your Docker installation works"
   swallow docker run -it --rm hello-world
 fi
-
-cd /
 
 pushd "$TMPDIR" &> /dev/null
   PYTHON_INFO="$("$PYTHON_BIN" --version 2>&1 | grep Python) ("$PYTHON_BIN")"
