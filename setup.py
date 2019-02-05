@@ -56,7 +56,7 @@ setup(
   # your project is installed. For an analysis of "install_requires" vs pip's
   # requirements files see:
   # https://packaging.python.org/en/latest/requirements.html
-  install_requires=[ "argparse", "requests", "PyYaml", "docker", "Jinja2" ],
+  install_requires=[ "argparse", "requests", "PyYaml", "docker", "Jinja2", "colorama" ],
 
   python_requires='>=2.7',
 
@@ -71,7 +71,7 @@ setup(
   # installed, specify them here. Note that you need to specify those files in
   # MANIFEST.in as well, since Python tools behave inconsistently
   include_package_data=True,
-  package_data={ "alidock.helpers": ["init-inside.sh.j2", "init-outside.sh.j2"] },
+  package_data={ "alidock.helpers": ["init.sh.j2"] },
 
   # Although 'package_data' is the preferred approach, in some case you may
   # need to place data files outside of your packages. See:

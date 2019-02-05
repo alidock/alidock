@@ -1,2 +1,1 @@
-include alidock/helpers/init-inside.sh.j2
-include alidock/helpers/init-outside.sh.j2
+include alidock/helpers/init.sh.j2
