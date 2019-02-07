@@ -3,8 +3,7 @@
 # Init script for alidock that runs inside the container. Auto-generated.
 
 # Log into the shared directory to allow debug
-exec &> >(tee "{{sharedDir}}/{{logFile}}")
-
+exec &> >(tee "{{runDir}}/log.txt")
 cd /
 
 # Check whether we have a persistent native volume and make it usable
@@ -82,18 +81,18 @@ chmod 0755 "{{sharedDir}}"
 chown "{{userName}}" "{{sharedDir}}"
 
 # Create a SSH key for that user and authorize it
-rm -rf "{{sharedDir}}/.alidock-ssh"
-mkdir -p "{{sharedDir}}/.alidock-ssh"
+rm -rf "{{runDir}}/ssh"
+mkdir -p "{{runDir}}/ssh"
 mkdir "/var/ssh-keys-{{userName}}"
-pushd "{{sharedDir}}/.alidock-ssh"
+pushd "{{runDir}}/ssh"
   ssh-keygen -t rsa -f alidock.pem -N ''
   mv alidock.pem.pub alidock.pub
   # authorized_keys outside shared dir to prevent wrong perms on Windows
-  cp alidock.pub "/var/ssh-keys-{{userName}}/authorized_keys"
+  cp -v alidock.pub "/var/ssh-keys-{{userName}}/authorized_keys"
 popd
-chmod -R u=rwX,g=rX,o=rX "{{sharedDir}}/.alidock-ssh" "/var/ssh-keys-{{userName}}"
-chmod -R 0600 "{{sharedDir}}/.alidock-ssh/alidock.pem"
-chown -R "{{userName}}" "{{sharedDir}}/.alidock-ssh" "/var/ssh-keys-{{userName}}"
+chmod -R u=rwX,g=rX,o=rX "{{runDir}}/ssh" "/var/ssh-keys-{{userName}}"
+chmod -R 0600 "{{runDir}}/ssh/alidock.pem"
+chown -R "{{userName}}" "{{runDir}}/ssh" "/var/ssh-keys-{{userName}}"
 
 # Silence login messages ("Last login:...")
 touch "{{sharedDir}}/.hushlogin"
@@ -146,4 +145,4 @@ LogLevel INFO
 EOF
 
 # Start the SSH server
-exec /usr/sbin/sshd -D -E "{{sharedDir}}/{{logFile}}"
+exec /usr/sbin/sshd -D -E "{{runDir}}/log.txt"

@@ -82,19 +82,26 @@ class AliDock(object):
         return runStatus
 
     def getSshCommand(self):
+        dockName = self.conf["dockName"].rsplit("-", 1)[0]
         try:
             attrs = self.cli.containers.get(self.conf["dockName"]).attrs
             sshPort = attrs["NetworkSettings"]["Ports"]["22/tcp"][0]["HostPort"]
         except (docker.errors.NotFound, KeyError) as exc:
-            outLog = os.path.join(self.conf["dirOutside"], ".alidock.log")
+            outLog = os.path.join(self.conf["dirOutside"], ".alidock-" + dockName, "log.txt")
             raise AliDockError("cannot find container, maybe it did not start up properly: "
                                "check log file {outLog} for details. Error: {msg}"
                                .format(outLog=outLog, msg=exc))
+
+        # Private key path detection. Older versions of alidock use different paths
+        privKey = os.path.join(os.path.expanduser(self.conf["dirOutside"]),
+                               ".alidock-" + dockName, "ssh", "alidock.pem")
+        if not os.path.isfile(privKey):
+            privKey = os.path.join(os.path.expanduser(self.conf["dirOutside"]),
+                                   ".alidock-ssh", "alidock.pem")
+
         return ["ssh", "localhost", "-p", str(sshPort), "-Y", "-F/dev/null", "-l", self.userName,
                 "-oForwardX11Trusted=no", "-oUserKnownHostsFile=/dev/null", "-oLogLevel=QUIET",
-                "-oStrictHostKeyChecking=no", "-oForwardX11Timeout=596h",
-                "-i", os.path.join(os.path.expanduser(self.conf["dirOutside"]),
-                                   ".alidock-ssh", "alidock.pem")]
+                "-oStrictHostKeyChecking=no", "-oForwardX11Timeout=596h", "-i", privKey]
 
     def waitSshUp(self):
         for _ in range(0, 50):
@@ -170,20 +177,22 @@ class AliDock(object):
     def run(self):
         # Create directory to be shared with the container
         outDir = os.path.expanduser(self.conf["dirOutside"])
+        dockName = self.conf["dockName"].rsplit("-", 1)[0]
+        runDir = outDir + "/" + ".alidock-" + dockName
         try:
-            os.makedirs(outDir)
+            os.makedirs(runDir)
         except OSError as exc:
-            if not os.path.isdir(outDir) or exc.errno != errno.EEXIST:
+            if not os.path.isdir(runDir) or exc.errno != errno.EEXIST:
                 raise AliDockError("cannot create directory {dir} to share with container, "
                                    "check permissions".format(dir=self.conf["dirOutside"]))
 
-        initShPath = os.path.join(outDir, ".alidock-init.sh")
+        initShPath = os.path.join(runDir, "init.sh")
         initSh = jinja2.Template(
             resource_string("alidock.helpers", "init.sh.j2").decode("utf-8"))
         with open(initShPath, "w", newline="\n") as fil:
-            fil.write(initSh.render(logFile=".alidock.log",
-                                    sharedDir=self.dirInside,
-                                    dockName=self.conf["dockName"].rsplit("-", 1)[0],
+            fil.write(initSh.render(sharedDir=self.dirInside,
+                                    runDir=self.dirInside + "/.alidock-" + dockName,
+                                    dockName=dockName,
                                     userName=self.userName,
                                     userId=getUserId()))
         os.chmod(initShPath, 0o700)
@@ -216,7 +225,7 @@ class AliDock(object):
 
         # Start container with that script
         self.cli.containers.run(self.conf["imageName"],
-                                command=[self.dirInside + "/.alidock-init.sh"],  # no os.path.join
+                                command=[self.dirInside + "/.alidock-" + dockName + "/init.sh"],
                                 detach=True,
                                 auto_remove=True,
                                 cap_add=["SYS_PTRACE"],
