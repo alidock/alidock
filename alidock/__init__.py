@@ -466,7 +466,8 @@ def processEnterStart(aliDock, args):
 def processStatus(aliDock):
     runStatus = aliDock.isRunning()
     if runStatus:
-        LOG.info("Container is running ({image})".format(image=runStatus["image"]))
+        LOG.info("Container is running (name: {name}, image: {image})".format(
+            name=aliDock.conf["dockName"], image=runStatus["image"]))
         exit(0)
     LOG.error("Container is not running")
     exit(1)
