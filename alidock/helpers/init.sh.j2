@@ -38,7 +38,7 @@ function _alidock_ps1() {
 export -f _alidock_ps1
 
 function aliBuildUpdateMirrors() {(
-  for REPO in $ALIBUILD_WORK_DIR/MIRROR/*/objects; do
+  for REPO in "$ALIBUILD_WORK_DIR"/MIRROR/*/objects; do
     [[ -d $REPO ]] || continue
     REPO=$(dirname "$REPO")
     echo "Updating $(basename $REPO)"
@@ -48,6 +48,48 @@ function aliBuildUpdateMirrors() {(
   done
 )}
 export -f aliBuildUpdateMirrors
+
+function alipip() {(
+  if [[ $ALIENVLVL ]]; then
+    echo "alipip: exit alienv before running" >&2
+    return 3
+  fi
+  : ${ALIPIP_ENV:="O2/latest"}
+  eval "$(alienv printenv ${ALIPIP_ENV:-""} 2> /dev/null)"
+  PIP=$(which pip 2> /dev/null)
+  if [[ $PIP != "$ALIBUILD_WORK_DIR"/* ]]; then
+    echo "alipip: Python not found when loading $ALIPIP_ENV" >&2
+    return 1
+  fi
+  [[ $# > 0 ]] && ALIPIP_PACKAGES="$*"
+  for P in $ALIPIP_PACKAGES; do
+    if ! pip install -I "$P"; then
+      echo "alipip: error installing $P" >&2
+      return 2
+    fi
+  done
+  echo "alipip: all Python packages will be available when loading $ALIPIP_ENV" >&2
+)}
+export -f alipip
+
+function aliBuildCleanSlate() {(
+  [[ $ALIBUILD_WORK_DIR ]] || return 1
+  echo -n "This will clean up all aliBuild files, except the mirrors. Continue? [type YES]: " >&2
+  read ANS
+  if [[ $ANS != YES ]]; then
+    echo "Aborting" >&2
+    return 2
+  fi
+  DF_BEFORE=$(df --block-size 1000000 -P "$ALIBUILD_WORK_DIR" | tail -n1 | awk '{ print $3 }')
+  for FILE in "$ALIBUILD_WORK_DIR"/*; do
+    [[ -e $FILE && $FILE != */MIRROR ]] || continue
+    rm -rf "$FILE"
+  done
+  DF_AFTER=$(df --block-size 1000000 -P "$ALIBUILD_WORK_DIR" | tail -n1 | awk '{ print $3 }')
+  echo "Freed space: $((DF_AFTER-DF_BEFORE)) MB" >&2
+  echo "You may want to run aliBuildUpdateMirrors now" >&2
+)}
+export -f aliBuildCleanSlate
 
 export PS1='`_alidock_ps1`[{{dockName}}] \w \$> '
 [[ -d /persist ]] && export ALIBUILD_WORK_DIR="/persist/sw" || export ALIBUILD_WORK_DIR="$HOME/.sw"
