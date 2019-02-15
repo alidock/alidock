@@ -58,7 +58,7 @@ class AliDock(object):
                                                              userId=getUserId())
 
     def parseConfig(self):
-        confFile = os.path.expanduser("~/.alidock-config.yaml")
+        confFile = os.path.join(os.path.expanduser("~"), ".alidock-config.yaml")
         try:
             confOverride = yaml.safe_load(open(confFile).read())
             for k in self.conf:
