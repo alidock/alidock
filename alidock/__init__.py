@@ -179,7 +179,7 @@ class AliDock(object):
         # Create directory to be shared with the container
         outDir = os.path.expanduser(self.conf["dirOutside"])
         dockName = self.conf["dockName"].rsplit("-", 1)[0]
-        runDir = outDir + "/" + ".alidock-" + dockName
+        runDir = os.path.join(outDir, ".alidock-" + dockName)
         try:
             os.makedirs(runDir)
         except OSError as exc:
@@ -192,7 +192,7 @@ class AliDock(object):
             resource_string("alidock.helpers", "init.sh.j2").decode("utf-8"))
         with open(initShPath, "w", newline="\n") as fil:
             fil.write(initSh.render(sharedDir=self.dirInside,
-                                    runDir=self.dirInside + "/.alidock-" + dockName,
+                                    runDir=posixpath.join(self.dirInside, ".alidock-" + dockName),
                                     dockName=dockName,
                                     userName=self.userName,
                                     userId=getUserId()))
