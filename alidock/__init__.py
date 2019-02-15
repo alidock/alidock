@@ -10,6 +10,7 @@ import errno
 import re
 import os
 import os.path
+import posixpath
 import sys
 import json
 import platform
@@ -136,7 +137,7 @@ class AliDock(object):
             elif "/" in label or label in [".", ".."]:
                 raise AliDockError("mount label {label} is invalid: label cannot contain a slash"
                                    "and cannot be equal to \"..\" or \".\"".format(label=label))
-            mnt = os.path.join("/", "mnt", label)
+            mnt = posixpath.join("/", "mnt", label)
             if not mode:
                 mode = "rw"
             if mode not in ["rw", "ro"]:
