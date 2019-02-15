@@ -84,25 +84,33 @@ class AliDock(object):
 
     def getSshCommand(self):
         dockName = self.conf["dockName"].rsplit("-", 1)[0]
+        outPath = os.path.expanduser(os.path.join(self.conf["dirOutside"], ".alidock-" + dockName))
         try:
             attrs = self.cli.containers.get(self.conf["dockName"]).attrs
             sshPort = attrs["NetworkSettings"]["Ports"]["22/tcp"][0]["HostPort"]
         except (docker.errors.NotFound, KeyError) as exc:
-            outLog = os.path.join(self.conf["dirOutside"], ".alidock-" + dockName, "log.txt")
+            outLog = os.path.join(outPath, "log.txt")
             raise AliDockError("cannot find container, maybe it did not start up properly: "
                                "check log file {outLog} for details. Error: {msg}"
                                .format(outLog=outLog, msg=exc))
 
-        # Private key path detection. Older versions of alidock use different paths
-        privKey = os.path.join(os.path.expanduser(self.conf["dirOutside"]),
-                               ".alidock-" + dockName, "ssh", "alidock.pem")
+        # Private key path detection. Older versions of alidock use different paths: do not break!
+        privKey = os.path.join(outPath, "ssh", "alidock.pem")
         if not os.path.isfile(privKey):
             privKey = os.path.join(os.path.expanduser(self.conf["dirOutside"]),
                                    ".alidock-ssh", "alidock.pem")
 
+        if platform.system() != "Windows":
+            # Reuse the same SSH connection for efficiency (not supported by Windows OpenSSH)
+            sshControl = ["-oControlPersist=yes", "-oControlMaster=auto",
+                          "-oControlPath=" + os.path.join(outPath, "ssh", "control")]
+        else:
+            sshControl = []
+
         return ["ssh", "localhost", "-p", str(sshPort), "-Y", "-F/dev/null", "-l", self.userName,
                 "-oForwardX11Trusted=no", "-oUserKnownHostsFile=/dev/null", "-oLogLevel=QUIET",
-                "-oStrictHostKeyChecking=no", "-oForwardX11Timeout=596h", "-i", privKey]
+                "-oStrictHostKeyChecking=no", "-oForwardX11Timeout=596h",
+                "-i", privKey] + sshControl
 
     def waitSshUp(self):
         for _ in range(0, 50):
