@@ -10,6 +10,7 @@ import errno
 import re
 import os
 import os.path
+import posixpath
 import sys
 import json
 import platform
@@ -57,7 +58,7 @@ class AliDock(object):
                                                              userId=getUserId())
 
     def parseConfig(self):
-        confFile = os.path.expanduser("~/.alidock-config.yaml")
+        confFile = os.path.join(os.path.expanduser("~"), ".alidock-config.yaml")
         try:
             confOverride = yaml.safe_load(open(confFile).read())
             for k in self.conf:
@@ -136,7 +137,7 @@ class AliDock(object):
             elif "/" in label or label in [".", ".."]:
                 raise AliDockError("mount label {label} is invalid: label cannot contain a slash"
                                    "and cannot be equal to \"..\" or \".\"".format(label=label))
-            mnt = os.path.join("/", "mnt", label)
+            mnt = posixpath.join("/", "mnt", label)
             if not mode:
                 mode = "rw"
             if mode not in ["rw", "ro"]:
