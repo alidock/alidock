@@ -77,7 +77,10 @@ class AliDock(object):
         runStatus = {}
         try:
             runContainer = self.cli.containers.get(self.conf["dockName"])
-            runStatus["image"] = runContainer.image.attrs["RepoTags"][0]
+            try:
+                runStatus["image"] = runContainer.image.attrs["RepoTags"][0]
+            except IndexError:
+                runStatus["image"] = runContainer.image.attrs["Id"]
         except docker.errors.NotFound:
             pass
         return runStatus
