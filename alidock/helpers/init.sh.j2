@@ -72,7 +72,7 @@ git config --system color.ui auto
 echo 'set completion-ignore-case on' >> /etc/inputrc
 
 # Create server's SSH key
-rm -f /etc/ssh/ssh_host_rsa_key
+rm -f /etc/ssh/ssh_host_*_key
 ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -N ''
 
 # Create a user with the same name/UID as the user outside the container
@@ -145,4 +145,6 @@ LogLevel INFO
 EOF
 
 # Start the SSH server
-exec /usr/sbin/sshd -D -E "{{runDir}}/log.txt"
+SSH_LOG=("-E" "{{runDir}}/log.txt")
+sshd -V 2>&1 | grep -q -- -E || SSH_LOG=()
+exec /usr/sbin/sshd -D "${SSH_LOG[@]}"
