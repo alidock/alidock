@@ -32,7 +32,7 @@ if hasattr(os, "getuid"):
     USERID = os.getuid()  # pylint: disable=no-member
 else:
     HASH = md5()
-    HASH.update(os.getlogin().encode())
+    HASH.update(os.getlogin().lower().encode())
     USERID = 10000 + int(HASH.hexdigest()[2:5], 16)
     del HASH
 
