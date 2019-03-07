@@ -19,14 +19,15 @@ elif [[ $TRAVIS_PULL_REQUEST == false && $TRAVIS_BRANCH == master ]]; then
   DOCKER_REPO=alisw
 fi
 
-if [[ $TRAVIS != true ]]; then
+if [[ $TRAVIS != true && ! $VIRTUAL_ENV ]]; then
   # Not on Travis: try to load alidock's virtualenv (non-fatal)
   source "$HOME/.virtualenvs/alidock/bin/activate" || true
-  type pylint
 fi
+type pylint
 
 # Pylint
-find . -name '*.py' -a -not -name 'setup.py' | xargs pylint
+find . -name '*.py' -a -not -path './dist/*'  \
+                    -a -not -path './build/*' | xargs pylint
 
 # Docker
 if [[ $RUN_DOCK ]]; then

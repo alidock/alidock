@@ -112,25 +112,20 @@ pinfo "Installing alidock under $VENV_DEST"
 swallow source "$VENV_DEST/bin/activate"
 
 URL=
-DEVEL=
 case "$MODE" in
   default) URL=alidock ;;
   git) URL=git+https://github.com/dberzano/alidock ;;
   devel)
-    URL="$PROG_DIR"
-    if [[ ! -f "$URL/setup.py" ]]; then
+    if [[ ! -f "$PROG_DIR/setup.py" ]]; then
       perr "You did not execute the installer from the development directory"
       exit 4
     fi
-    DEVEL="-e"
+    URL=("-e" "$PROG_DIR[devel]")
   ;;
   *) URL="alidock==$MODE" ;;
 esac
 
-swallow pip install --upgrade ${DEVEL} "${URL}"
-if [[ $DEVEL ]]; then
-  swallow pip install pylint
-fi
+swallow pip install --upgrade "${URL[@]}"
 
 # Patch init scripts for bash and zsh
 SHELL_CHANGED=
