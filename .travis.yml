@@ -8,10 +8,8 @@ python:
 install: |
   set -e
   set -o pipefail
-  for PKG in pylint argparse requests PyYaml docker Jinja2 colorama 'twine>=1.11.0' 'setuptools>=38.6.0'; do
-    pip install "$PKG" --upgrade
-  done
-  pip list
+  pip install -e '.[devel]'
+  pip freeze --all
 script: |
   set -e
   set -o pipefail
