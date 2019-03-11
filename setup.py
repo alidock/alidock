@@ -56,7 +56,7 @@ SETUP = Setup(
 
     description="Run your ALICE environment from a container easily",
 
-    url="https://github.com/dberzano/alidock",
+    url="https://github.com/alidock/alidock",
     author="Dario Berzano",
     author_email="dario.berzano@cern.ch",
     license="GPL",

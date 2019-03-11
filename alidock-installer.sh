@@ -114,7 +114,7 @@ swallow source "$VENV_DEST/bin/activate"
 URL=
 case "$MODE" in
   default) URL=alidock ;;
-  git) URL=git+https://github.com/dberzano/alidock ;;
+  git) URL=git+https://github.com/alidock/alidock ;;
   devel)
     if [[ ! -f "$PROG_DIR/setup.py" ]]; then
       perr "You did not execute the installer from the development directory"

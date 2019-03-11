@@ -27,6 +27,7 @@ from alidock.log import Log
 from alidock.util import splitEsc, getUserId, execReturn
 
 LOG = Log()
+INSTALLER_URL = "https://raw.githubusercontent.com/alidock/alidock/master/alidock-installer.sh"
 
 class AliDockError(Exception):
     def __init__(self, msg):
@@ -311,7 +312,6 @@ class AliDock(object):
         """Perform an automatic update of alidock only if it was installed in the custom virtual
            environment."""
         curModulePath = os.path.realpath(__file__)
-        updateUrl = "https://bit.ly/alidock-installer"
         virtualenvPath = os.path.realpath(os.path.expanduser("~/.virtualenvs/alidock"))
         if curModulePath.startswith(virtualenvPath):
             LOG.warning("Updating alidock automatically")
@@ -320,7 +320,7 @@ class AliDock(object):
             updateEnv["ALIDOCK_RUN"] = "1"
             os.execvpe("bash",
                        ["bash", "-c",
-                        "bash <(curl -fsSL {url}) --no-check-docker --quiet".format(url=updateUrl)],
+                        "bash <(curl -fsSL {u}) --no-check-docker --quiet".format(u=INSTALLER_URL)],
                        updateEnv)
 
     def hasClientUpdates(self):
@@ -520,7 +520,7 @@ def processActions(args):
             aliDock.doAutoUpdate()
             LOG.error("You are using an obsolete version of alidock.")
             LOG.error("Upgrade NOW with:")
-            LOG.error("    bash <(curl -fsSL https://bit.ly/alidock-installer)")
+            LOG.error("    bash <(curl -fsSL {url})".format(url=INSTALLER_URL))
     except AliDockError:
         LOG.warning("Cannot check for alidock updates this time")
 
