@@ -51,7 +51,8 @@ class AliDock(object):
             "dontUpdateAlidock" : False,
             "useNvidiaRuntime"  : False,
             "mount"             : [],
-            "cvmfs"             : False
+            "cvmfs"             : False,
+            "web"               : False
         }
         self.parseConfig()
         self.overrideConfig(overrideConf)
@@ -111,10 +112,15 @@ class AliDock(object):
         else:
             sshControl = []
 
-        return ["ssh", "localhost", "-p", str(sshPort), "-Y", "-F/dev/null", "-l", self.userName,
-                "-oForwardX11Trusted=no", "-oUserKnownHostsFile=/dev/null", "-oLogLevel=QUIET",
-                "-oStrictHostKeyChecking=no", "-oForwardX11Timeout=596h",
-                "-i", privKey] + sshControl
+        if self.conf["web"]:
+            # No X11 forwarding in web mode
+            xForward = []
+        else:
+            xForward = ["-oForwardX11Trusted=no", "-Y", "-oForwardX11Timeout=596h"]
+
+        return ["ssh", "localhost", "-p", str(sshPort), "-F/dev/null", "-l", self.userName,
+                "-oUserKnownHostsFile=/dev/null", "-oLogLevel=QUIET", "-oStrictHostKeyChecking=no",
+                "-i", privKey] + sshControl + xForward
 
     def waitSshUp(self):
         for _ in range(0, 50):
@@ -129,9 +135,16 @@ class AliDock(object):
         return False
 
     def shell(self, cmd=None):
-        if platform.system() == "Windows" and "DISPLAY" not in os.environ:
+        try:
+            attrs = self.cli.containers.get(self.conf["dockName"]).attrs
+            xPort = attrs["NetworkSettings"]["Ports"]["14500/tcp"][0]["HostPort"]
+        except (docker.errors.NotFound, KeyError):
+            xPort = None
+        if not xPort and platform.system() == "Windows" and "DISPLAY" not in os.environ:
             # On Windows if no DISPLAY environment is set we assume a sensible default
             os.environ["DISPLAY"] = "127.0.0.1:0.0"
+        if xPort:
+            LOG.warning("X11 web browser access: http://localhost:{port}".format(port=xPort))
         execReturn("ssh", self.getSshCommand() + (cmd if cmd else []))
 
     def rootShell(self):
@@ -207,7 +220,8 @@ class AliDock(object):
                                     runDir=posixpath.join(self.dirInside, ".alidock-" + dockName),
                                     dockName=dockName,
                                     userName=self.userName,
-                                    userId=getUserId()))
+                                    userId=getUserId(),
+                                    useWebX11=self.conf["web"]))
         os.chmod(initShPath, 0o700)
 
         if platform.system() == "Darwin":
@@ -236,6 +250,11 @@ class AliDock(object):
             else:
                 raise AliDockError("cannot find the NVIDIA runtime in your Docker installation")
 
+        # Ports to forward (None == random port)
+        fwdPorts = {"22/tcp": ("127.0.0.1", None)}
+        if self.conf["web"]:
+            fwdPorts["14500/tcp"] = ("127.0.0.1", None)
+
         # Start container with that script
         self.cli.containers.run(self.conf["imageName"],
                                 command=[self.dirInside + "/.alidock-" + dockName + "/init.sh"],
@@ -246,7 +265,7 @@ class AliDock(object):
                                 hostname=self.conf["dockName"],
                                 name=self.conf["dockName"],
                                 mounts=dockMounts,
-                                ports={"22/tcp": None}, # None == random port
+                                ports=fwdPorts,
                                 runtime=dockRuntime)
 
         return True
@@ -420,6 +439,9 @@ def entrypoint():
     argp.add_argument("--cvmfs", dest="cvmfs", default=None,
                       action="store_true",
                       help="Mount CVMFS inside the container [cvmfs]")
+    argp.add_argument("--web", dest="web", default=None,
+                      action="store_true",
+                      help="Make X11 available from a web browser [web]")
 
     argp.add_argument("action", default="enter", nargs="?",
                       choices=["enter", "root", "exec", "start", "status", "stop"],
