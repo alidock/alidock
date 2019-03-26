@@ -23,3 +23,4 @@ RUN cd /tmp && \
     cd .. && \
     rm -rf hub-linux*
 RUN pip install alibuild==v1.5.4
+RUN echo useful edit
