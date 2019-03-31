@@ -82,7 +82,7 @@ SETUP = Setup(
     # List run-time dependencies here.  These will be installed by pip when your project is
     # installed. For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=["requests", "PyYaml", "docker", "Jinja2", "colorama"],
+    install_requires=["requests", "PyYaml", "docker", "Jinja2", "colorama", "pathlib"],
 
     python_requires=">=2.7",
 

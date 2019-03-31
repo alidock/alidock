@@ -82,6 +82,11 @@ useradd -d "{{sharedDir}}" -M -N -s /bin/bash -u "{{userId}}" "{{userName}}"
 chmod 0755 "{{sharedDir}}"
 chown "{{userName}}" "{{sharedDir}}"
 
+# Add user to custom groups
+{% for group in userAdditionalGroups %}
+usermod -aG "{{userName}}" "{{group}}"
+{% endfor %}
+
 # Create a SSH key for that user and authorize it
 rm -rf "{{runDir}}/ssh"
 mkdir -p "{{runDir}}/ssh"

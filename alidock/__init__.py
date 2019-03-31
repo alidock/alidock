@@ -10,6 +10,7 @@ import errno
 import os
 import os.path
 import posixpath
+from pathlib import Path
 import sys
 import json
 import platform
@@ -38,6 +39,7 @@ class AliDockError(Exception):
 class AliDock(object):
 
     def __init__(self, overrideConf=None):
+        self.userGroups = []
         self.cli = docker.from_env()
         self.dirInside = "/home/alidock"
         self.userName = getUserName()
@@ -49,6 +51,7 @@ class AliDock(object):
             "dontUpdateImage"   : False,
             "dontUpdateAlidock" : False,
             "useNvidiaRuntime"  : False,
+            "enableRocmDevices" : False,
             "mount"             : [],
             "cvmfs"             : False,
             "web"               : False,
@@ -231,7 +234,8 @@ class AliDock(object):
                                     dockName=dockName,
                                     userName=self.userName,
                                     userId=getUserId(),
-                                    useWebX11=self.conf["web"]))
+                                    useWebX11=self.conf["web"],
+                                    userAdditionalGroups=self.userGroups))
         os.chmod(initShPath, 0o700)
 
         if platform.system() == "Darwin":
@@ -260,6 +264,17 @@ class AliDock(object):
             else:
                 raise AliDockError("cannot find the NVIDIA runtime in your Docker installation")
 
+        dockDevices = []
+        if self.conf["enableRocmDevices"]:
+            try:
+                if Path("/dev/kfd").is_char_device() and Path("/dev/dri").is_dir():
+                    dockDevices = ["/dev/kfd", "/dev/dri"]
+                    self.userGroups.append("video")
+                else:
+                    raise AliDockError("cannot find the ROCm devices on your host")
+            except OSError as exc:
+                raise AliDockError(str(exc))
+
         # Ports to forward (None == random port)
         fwdPorts = {"22/tcp": ("127.0.0.1", None)}
         if self.conf["web"]:
@@ -276,7 +291,8 @@ class AliDock(object):
                                 name=self.conf["dockName"],
                                 mounts=dockMounts,
                                 ports=fwdPorts,
-                                runtime=dockRuntime)
+                                runtime=dockRuntime,
+                                devices=dockDevices)
 
         return True
 
@@ -447,6 +463,9 @@ def entrypoint():
     argp.add_argument("--nvidia", dest="useNvidiaRuntime", default=None,
                       action="store_true",
                       help="Launch container using the NVIDIA Docker runtime [useNvidiaRuntime]")
+    argp.add_argument("--rocm", dest="enableRocmDevices", default=None,
+                      action="store_true",
+                      help="Expose devices needed by ROCm [enableRocmDevices]")
     argp.add_argument("--cvmfs", dest="cvmfs", default=None,
                       action="store_true",
                       help="Mount CVMFS inside the container [cvmfs]")
