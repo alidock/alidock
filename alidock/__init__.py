@@ -44,7 +44,7 @@ class AliDock(object):
         self.userName = re.sub("[^0-9a-z_-]", "_", os.getlogin().lower())
         self.conf = {
             "dockName"          : "alidock",
-            "imageName"         : "alisw/alidock:latest",
+            "imageName"         : "alipier/alidock:latest",
             "dirOutside"        : os.path.join("~", "alidock"),
             "updatePeriod"      : 43200,
             "dontUpdateImage"   : False,
