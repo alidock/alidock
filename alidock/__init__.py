@@ -7,6 +7,7 @@ from time import time, sleep
 from datetime import datetime as dt
 from io import open
 import errno
+from grp import getgrnam
 import os
 import os.path
 import posixpath
@@ -39,7 +40,6 @@ class AliDockError(Exception):
 class AliDock(object):
 
     def __init__(self, overrideConf=None):
-        self.userGroups = []
         self.cli = docker.from_env()
         self.dirInside = "/home/alidock"
         self.userName = getUserName()
@@ -225,6 +225,29 @@ class AliDock(object):
                 raise AliDockError("cannot create directory {dir} to share with container, "
                                    "check permissions".format(dir=self.conf["dirOutside"]))
 
+        dockDevices = []
+        dockGroupAdd = []
+        deleteGroups = []
+        userGroups = []
+        addGroups = {}
+        if self.conf["enableRocmDevices"]:
+            try:
+                if Path("/dev/kfd").is_char_device() and Path("/dev/dri").is_dir():
+                    dockDevices += ["/dev/kfd", "/dev/dri"]
+                    dockGroupAdd.append("video")
+                else:
+                    raise AliDockError("cannot find the ROCm devices on your host")
+            except OSError as exc:
+                raise AliDockError(str(exc))
+            deleteGroups.append("video")
+
+            try:
+                addGroups["video"] = getgrnam("video")[2]
+            except KeyError as exc:
+                raise AliDockError("cannot find video group on your host,"
+                                   "check your ROCm installation")
+            userGroups.append("video")
+
         initShPath = os.path.join(runDir, "init.sh")
         initSh = jinja2.Template(
             resource_string("alidock.helpers", "init.sh.j2").decode("utf-8"))
@@ -235,7 +258,10 @@ class AliDock(object):
                                     userName=self.userName,
                                     userId=getUserId(),
                                     useWebX11=self.conf["web"],
-                                    userAdditionalGroups=self.userGroups))
+                                    deleteGroups=deleteGroups,
+                                    addGroups=addGroups,
+                                    userGroups=userGroups))
+
         os.chmod(initShPath, 0o700)
 
         if platform.system() == "Darwin":
@@ -264,17 +290,6 @@ class AliDock(object):
             else:
                 raise AliDockError("cannot find the NVIDIA runtime in your Docker installation")
 
-        dockDevices = []
-        if self.conf["enableRocmDevices"]:
-            try:
-                if Path("/dev/kfd").is_char_device() and Path("/dev/dri").is_dir():
-                    dockDevices = ["/dev/kfd", "/dev/dri"]
-                    self.userGroups.append("video")
-                else:
-                    raise AliDockError("cannot find the ROCm devices on your host")
-            except OSError as exc:
-                raise AliDockError(str(exc))
-
         # Ports to forward (None == random port)
         fwdPorts = {"22/tcp": ("127.0.0.1", None)}
         if self.conf["web"]:
@@ -292,7 +307,8 @@ class AliDock(object):
                                 mounts=dockMounts,
                                 ports=fwdPorts,
                                 runtime=dockRuntime,
-                                devices=dockDevices)
+                                devices=dockDevices,
+                                group_add=dockGroupAdd)
 
         return True
 

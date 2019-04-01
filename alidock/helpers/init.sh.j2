@@ -77,14 +77,24 @@ echo 'set completion-ignore-case on' >> /etc/inputrc
 rm -f /etc/ssh/ssh_host_*_key
 ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -N ''
 
+# Delete all groups in a list
+{% for group in deleteGroups %}
+groupdel "{{group}}"
+{% endfor %}
+
+# Create groups in a dict  {groupName:[groupId]}
+{% for groupName, groupId in addGroups.items() %}
+groupadd "{{ "-g "~groupId if groupId else "" }}" "{{groupName}}"
+{% endfor %}
+
 # Create a user with the same name/UID as the user outside the container
 useradd -d "{{sharedDir}}" -M -N -s /bin/bash -u "{{userId}}" "{{userName}}"
 chmod 0755 "{{sharedDir}}"
 chown "{{userName}}" "{{sharedDir}}"
 
 # Add user to custom groups
-{% for group in userAdditionalGroups %}
-usermod -aG "{{userName}}" "{{group}}"
+{% for group in userGroups %}
+usermod -aG "{{group}}" "{{userName}}"
 {% endfor %}
 
 # Create a SSH key for that user and authorize it
