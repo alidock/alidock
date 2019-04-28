@@ -7,7 +7,6 @@ from time import time, sleep
 from datetime import datetime as dt
 from io import open
 import errno
-import re
 import os
 import os.path
 import posixpath
@@ -24,7 +23,7 @@ import requests
 from requests.exceptions import RequestException
 from pkg_resources import resource_string, parse_version, require
 from alidock.log import Log
-from alidock.util import splitEsc, getUserId, execReturn
+from alidock.util import splitEsc, getUserId, getUserName, execReturn
 
 LOG = Log()
 INSTALLER_URL = "https://raw.githubusercontent.com/alidock/alidock/master/alidock-installer.sh"
@@ -41,7 +40,7 @@ class AliDock(object):
     def __init__(self, overrideConf=None):
         self.cli = docker.from_env()
         self.dirInside = "/home/alidock"
-        self.userName = re.sub("[^0-9a-z_-]", "_", os.getlogin().lower())
+        self.userName = getUserName()
         self.conf = {
             "dockName"          : "alidock",
             "imageName"         : "alipier/alidock:latest",
