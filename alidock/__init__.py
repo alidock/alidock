@@ -51,7 +51,8 @@ class AliDock(object):
             "useNvidiaRuntime"  : False,
             "mount"             : [],
             "cvmfs"             : False,
-            "web"               : False
+            "web"               : False,
+            "debug"             : False
         }
         self.parseConfig()
         self.overrideConfig(overrideConf)
@@ -117,9 +118,11 @@ class AliDock(object):
         else:
             xForward = ["-oForwardX11Trusted=no", "-Y", "-oForwardX11Timeout=596h"]
 
-        return ["ssh", "localhost", "-p", str(sshPort), "-F/dev/null", "-l", self.userName,
-                "-oUserKnownHostsFile=/dev/null", "-oLogLevel=QUIET", "-oStrictHostKeyChecking=no",
-                "-i", privKey] + sshControl + xForward
+        logLevel = "-oLogLevel=" + ("DEBUG" if self.conf["debug"] else "QUIET")
+
+        return ["ssh", "localhosto", "-p", str(sshPort), "-F/dev/null", "-l", self.userName,
+                "-oUserKnownHostsFile=/dev/null", logLevel, "-oStrictHostKeyChecking=no",
+                "-oIdentitiesOnly=yes", "-i", privKey] + sshControl + xForward
 
     def waitSshUp(self):
         for _ in range(0, 50):
@@ -441,6 +444,9 @@ def entrypoint():
     argp.add_argument("--web", dest="web", default=None,
                       action="store_true",
                       help="Make X11 available from a web browser [web]")
+    argp.add_argument("--debug", dest="debug", default=None,
+                      action="store_true",
+                      help="Increase verbosity [debug]")
 
     argp.add_argument("action", default="enter", nargs="?",
                       choices=["enter", "root", "exec", "start", "status", "stop"],
