@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import platform
 from subprocess import call
@@ -38,9 +39,16 @@ else:
 
 def getUserId():
     """Return the current user's numeric identifier according to the operating system. When the
-    appropriate system method is not available, a unique identifier is computed out of the user
+    appropriate system method is not available, a unique identifier is computed from the user
     login name."""
     return USERID
+
+def getUserName():
+    """Return the username to be used inside the container. Username is computed according to the
+    host system's username, and sanitized appropriately (in particular we handle special symbols,
+    casing and purely numerical usernames)."""
+    userName = re.sub("[^0-9a-z_-]", "_", os.getlogin().lower())
+    return "u" + userName if userName.isdigit() else userName
 
 if platform.system() == "Windows":
     def execReturn(_, args):
