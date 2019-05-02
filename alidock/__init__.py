@@ -120,7 +120,7 @@ class AliDock(object):
 
         logLevel = "-oLogLevel=" + ("DEBUG" if self.conf["debug"] else "QUIET")
 
-        return ["ssh", "localhosto", "-p", str(sshPort), "-F/dev/null", "-l", self.userName,
+        return ["ssh", "localhost", "-p", str(sshPort), "-F/dev/null", "-l", self.userName,
                 "-oUserKnownHostsFile=/dev/null", logLevel, "-oStrictHostKeyChecking=no",
                 "-oIdentitiesOnly=yes", "-i", privKey] + sshControl + xForward
 
