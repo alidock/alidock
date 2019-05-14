@@ -162,11 +162,13 @@ class AliDock(object):
         dockMounts = []
         for mount in self.conf["mount"]:
             src, label, mode = splitEsc(mount, ":", 2)
-            src = os.path.expanduser(src)
+            src = os.path.expanduser(src).rstrip("/")
+            if not src:
+                src = "/"
             if os.path.isfile(src):
                 raise AliDockError("mount {src} is a file: only dirs allowed".format(src=src))
             if not label:
-                label = os.path.basename(src)
+                label = "root" if src == "/" else os.path.basename(src)
             elif "/" in label or label in [".", ".."]:
                 raise AliDockError("mount label {label} is invalid: label cannot contain a slash"
                                    "and cannot be equal to \"..\" or \".\"".format(label=label))
