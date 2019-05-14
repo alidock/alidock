@@ -23,7 +23,7 @@ import requests
 from requests.exceptions import RequestException
 from pkg_resources import resource_string, parse_version, require
 from alidock.log import Log
-from alidock.util import splitEsc, getUserId, getUserName, execReturn
+from alidock.util import splitEsc, getUserId, getUserName, execReturn, deactivateVenv
 
 LOG = Log()
 INSTALLER_URL = "https://raw.githubusercontent.com/alidock/alidock/master/alidock-installer.sh"
@@ -337,6 +337,7 @@ class AliDock(object):
         if curModulePath.startswith(virtualenvPath):
             LOG.warning("Updating alidock automatically")
             updateEnv = os.environ
+            deactivateVenv(updateEnv)
             updateEnv["ALIDOCK_ARGS"] = " ".join(sys.argv[1:])
             updateEnv["ALIDOCK_RUN"] = "1"
             os.execvpe("bash",
