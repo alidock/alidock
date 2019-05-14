@@ -10,6 +10,11 @@ install: |
   set -o pipefail
   pip install -e '.[devel]'
   pip freeze --all
+before_script:
+  - export -f travis_nanoseconds
+  - export -f travis_fold
+  - export -f travis_time_start
+  - export -f travis_time_finish
 script: |
   set -e
   set -o pipefail
