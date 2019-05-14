@@ -1,4 +1,5 @@
 import os
+import os.path
 import re
 import sys
 import platform
@@ -49,6 +50,20 @@ def getUserName():
     casing and purely numerical usernames)."""
     userName = re.sub("[^0-9a-z_-]", "_", os.getlogin().lower())
     return "u" + userName if userName.isdigit() else userName
+
+def deactivateVenv(env):
+    """Given a dictionary with the current environment it cleans it up by removing the current
+    Python virtual environment."""
+    if not "VIRTUAL_ENV" in env:
+        return
+    venvPrefix = os.path.realpath(os.path.expanduser(env["VIRTUAL_ENV"]))
+    for var in ["PYTHONHOME", "PYTHONPATH", "PATH", "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH"]:
+        if not var in env:
+            continue
+        val = os.path.realpath(os.path.expanduser(env[var]))
+        env[var] = ":".join(x for x in val.split(":")
+                            if not os.path.realpath(os.path.expanduser(x)).startswith(venvPrefix))
+    del env["VIRTUAL_ENV"]
 
 if platform.system() == "Windows":
     def execReturn(_, args):
