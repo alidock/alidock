@@ -53,7 +53,7 @@ fold_start "Producing wheel"
     PIP_PASS=$PYPI_PASSWORD  # encrypted from Travis CI
     PIP_USER=dberzano
     PIP_TAG=$TRAVIS_TAG
-  elif [[ $TRAVIS_PULL_REQUEST ]]; then
+  elif [[ $TRAVIS_PULL_REQUEST && $TRAVIS_PULL_REQUEST != false ]]; then
     # Test deployment: use test index server
     PIP_REPO="https://test.pypi.org/legacy/"
     PIP_PASS=$PYPI_TEST_PASSWORD  # encrypted from Travis CI
@@ -84,5 +84,5 @@ if [[ $PIP_USER ]]; then
     info "  pip install --extra-index-url https://test.pypi.org/simple 'alidock==$PIP_TAG'"
   fi
 else
-    info "Not uploading wheel: test not on Travis CI"
-  fi
+  info "Not uploading wheel"
+fi
