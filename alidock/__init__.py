@@ -95,8 +95,14 @@ class AliDock(object):
             sshPort = attrs["NetworkSettings"]["Ports"]["22/tcp"][0]["HostPort"]
         except (docker.errors.NotFound, KeyError) as exc:
             outLog = os.path.join(outPath, "log.txt")
-            raise AliDockError("cannot find container, maybe it did not start up properly: "
-                               "check log file {outLog} for details. Error: {msg}"
+            try:
+                with open(outLog, "a+"):
+                    pass
+            except (IOError, OSError) as exc:
+                pass
+            raise AliDockError("cannot log into the container, maybe it did not start up properly: "
+                               "check log file {outLog} for details and make sure your Docker "
+                               "version is updated. Error: {msg}"
                                .format(outLog=outLog, msg=exc))
 
         # Private key path detection. Older versions of alidock use different paths: do not break!
