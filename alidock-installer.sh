@@ -31,6 +31,13 @@ function swallow() {
   fi
   return $ERR
 }
+function restore_quit() {
+  [[ -d ${VENV_DEST}.bak ]] || exit 8
+  rm -rf "$VENV_DEST"
+  mv "${VENV_DEST}.bak" "$VENV_DEST"
+  pwarn "Old alidock installation was restored"
+  exit 7
+}
 
 if [[ $(id -u) == 0 ]]; then
   perr "Refusing to continue the installation as root"
@@ -74,6 +81,20 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+URL=
+case "$MODE" in
+  default) URL=alidock ;;
+  git) URL=git+https://github.com/alidock/alidock ;;
+  devel)
+    if [[ ! -f "$PROG_DIR/setup.py" ]]; then
+      perr "Run from the development directory to install in development mode"
+      exit 4
+    fi
+    URL=("-e" "$PROG_DIR[devel]")
+  ;;
+  *) URL="alidock==$MODE" ;;
+esac
+
 # Favour `python3`, fall back on `python`
 PYTHON_BIN=python3
 type "$PYTHON_BIN" &> /dev/null || PYTHON_BIN=python
@@ -102,30 +123,20 @@ pushd "$TMPDIR" &> /dev/null
   PYTHON_INFO="$("$PYTHON_BIN" --version 2>&1 | grep Python) ("$PYTHON_BIN")"
   pinfo "Creating an environment for alidock using $PYTHON_INFO and virtualenv $VIRTUALENV_VERSION"
   curl -Lso - https://github.com/pypa/virtualenv/tarball/${VIRTUALENV_VERSION} | tar xzf -
-  rm -rf "$VENV_DEST"  # always start from scratch
+  if [[ -d $VENV_DEST ]]; then
+    rm -rf "${VENV_DEST}.bak"
+    mv "$VENV_DEST" "${VENV_DEST}.bak"  # make backup of current venv
+  fi
   VIRTUALENV_BIN=$(echo pypa-virtualenv-*/virtualenv.py)
   [[ -e $VIRTUALENV_BIN ]] || VIRTUALENV_BIN=$(echo pypa-virtualenv-*/src/virtualenv.py)
-  swallow "$PYTHON_BIN" "$VIRTUALENV_BIN" "$VENV_DEST"
+  swallow "$PYTHON_BIN" "$VIRTUALENV_BIN" "$VENV_DEST" || restore_quit
 popd &> /dev/null
 
 pinfo "Installing alidock under $VENV_DEST"
 swallow source "$VENV_DEST/bin/activate"
 
-URL=
-case "$MODE" in
-  default) URL=alidock ;;
-  git) URL=git+https://github.com/alidock/alidock ;;
-  devel)
-    if [[ ! -f "$PROG_DIR/setup.py" ]]; then
-      perr "You did not execute the installer from the development directory"
-      exit 4
-    fi
-    URL=("-e" "$PROG_DIR[devel]")
-  ;;
-  *) URL="alidock==$MODE" ;;
-esac
-
-swallow pip install --upgrade "${URL[@]}"
+swallow pip install --upgrade "${URL[@]}" || restore_quit
+rm -rf "${VENV_DEST}.bak"  # not needed anymore
 
 # Patch init scripts for bash and zsh
 SHELL_CHANGED=
