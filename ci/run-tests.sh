@@ -61,7 +61,7 @@ fold_start "Producing wheel"
     PIP_TAG="0.0.post${TRAVIS_PULL_REQUEST}.dev${TRAVIS_BUILD_NUMBER}"
   fi
 
-  if [[ $PIP_USER ]]; then
+  if [[ $PIP_PASS ]]; then
     sed -i.deleteme -e "s/LAST-TAG/${PIP_TAG}/g" setup.py
     rm -f setup.py.deleteme
     git clean -fxd
@@ -71,7 +71,7 @@ fold_start "Producing wheel"
   twine check dist/*
 fold_end
 
-if [[ $PIP_USER ]]; then
+if [[ $PIP_PASS ]]; then
   fold_start "Uploading wheel"
     twine upload ${PIP_REPO:+--repository-url "$PIP_REPO"} \
                  --skip-existing \
