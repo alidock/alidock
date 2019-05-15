@@ -51,6 +51,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     git) MODE=git ;;
     devel) MODE=devel ;;
+    pull*)
+      MODE=pull
+      PRNUM=${1:4}
+    ;;
     --no-check-docker) CHECK_DOCKER= ;;
     --quiet)
       function pinfo() { :; }
@@ -66,6 +70,7 @@ while [[ $# -gt 0 ]]; do
       pwarn "    alidock-installer.sh git        # install latest version from Git"
       pwarn "    alidock-installer.sh devel      # install local development version"
       pwarn "    alidock-installer.sh <version>  # install specific version from PyPI"
+      pwarn "    alidock-installer.sh pull<num>  # install version from pull request <num>"
       pwarn ""
       pwarn "Parameters:"
       pwarn "    --no-check-docker            # don't check if Docker works"
@@ -92,6 +97,7 @@ case "$MODE" in
     fi
     URL=("-e" "$PROG_DIR[devel]")
   ;;
+  pull) URL=git+https://github.com/alidock/alidock@refs/pull/$PRNUM/head ;;
   *) URL="alidock==$MODE" ;;
 esac
 
