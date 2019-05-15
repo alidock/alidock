@@ -213,6 +213,19 @@ class AliDock(object):
             raise AliDockError("cannot exclude {dir} from Time Machine backups, "
                                "tmutil returned {ret}".format(dir=swNoidx, ret=exc.returncode))
 
+    @staticmethod
+    def checkRocm():
+        try:
+            if not Path("/dev/kfd").is_char_device() or not Path("/dev/dri").is_dir():
+                raise AliDockError("cannot find the required ROCm devices on your host")
+        except OSError as exc:
+            raise AliDockError(str(exc))
+        try:
+            getgrnam("video")
+        except KeyError:
+            raise AliDockError("cannot find the video group, check your ROCm installation")
+        return True
+
     def run(self):
         # Create directory to be shared with the container
         outDir = os.path.expanduser(self.conf["dirOutside"])
@@ -227,19 +240,9 @@ class AliDock(object):
 
         dockDevices = []
         addGroups = {}  # {"groupname": gid} added inside the container (gid=None == I don't care)
-        if self.conf["enableRocmDevices"]:
-            try:
-                if Path("/dev/kfd").is_char_device() and Path("/dev/dri").is_dir():
-                    dockDevices += ["/dev/kfd", "/dev/dri"]
-                else:
-                    raise AliDockError("cannot find the required ROCm devices on your host")
-            except OSError as exc:
-                raise AliDockError(str(exc))
-
-            try:
-                addGroups["video"] = getgrnam("video").gr_gid
-            except KeyError as exc:
-                raise AliDockError("cannot find the video group, check your ROCm installation")
+        if self.conf["enableRocmDevices"] and self.checkRocm():
+            dockDevices += ["/dev/kfd", "/dev/dri"]
+            addGroups["video"] = getgrnam("video").gr_gid
 
         initShPath = os.path.join(runDir, "init.sh")
         initSh = jinja2.Template(
