@@ -227,26 +227,21 @@ class AliDock(object):
 
         dockDevices = []
         dockGroupAdd = []
-        deleteGroups = []
-        userGroups = []
-        addGroups = {}
+        addGroups = {}  # {"groupname": gid} added inside the container (gid=None == I don't care)
         if self.conf["enableRocmDevices"]:
             try:
                 if Path("/dev/kfd").is_char_device() and Path("/dev/dri").is_dir():
                     dockDevices += ["/dev/kfd", "/dev/dri"]
                     dockGroupAdd.append("video")
                 else:
-                    raise AliDockError("cannot find the ROCm devices on your host")
+                    raise AliDockError("cannot find the required ROCm devices on your host")
             except OSError as exc:
                 raise AliDockError(str(exc))
-            deleteGroups.append("video")
 
             try:
-                addGroups["video"] = getgrnam("video")[2]
+                addGroups["video"] = getgrnam("video").gr_gid
             except KeyError as exc:
-                raise AliDockError("cannot find video group on your host,"
-                                   "check your ROCm installation")
-            userGroups.append("video")
+                raise AliDockError("cannot find the video group, check your ROCm installation")
 
         initShPath = os.path.join(runDir, "init.sh")
         initSh = jinja2.Template(
@@ -258,9 +253,7 @@ class AliDock(object):
                                     userName=self.userName,
                                     userId=getUserId(),
                                     useWebX11=self.conf["web"],
-                                    deleteGroups=deleteGroups,
-                                    addGroups=addGroups,
-                                    userGroups=userGroups))
+                                    addGroups=addGroups))
 
         os.chmod(initShPath, 0o700)
 
