@@ -3,6 +3,8 @@ import os.path
 import re
 import sys
 import platform
+from grp import getgrnam
+from pathlib import Path
 from subprocess import call
 from hashlib import md5
 
@@ -64,6 +66,18 @@ def deactivateVenv(env):
         env[var] = ":".join(x for x in val.split(":")
                             if not os.path.realpath(os.path.expanduser(x)).startswith(venvPrefix))
     del env["VIRTUAL_ENV"]
+
+def checkRocm():
+    try:
+        if not Path("/dev/kfd").is_char_device() or not Path("/dev/dri").is_dir():
+            return False
+    except OSError:
+        return False
+    try:
+        getgrnam("video")
+    except KeyError:
+        return False
+    return True
 
 if platform.system() == "Windows":
     def execReturn(_, args):
