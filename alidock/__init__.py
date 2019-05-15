@@ -226,13 +226,11 @@ class AliDock(object):
                                    "check permissions".format(dir=self.conf["dirOutside"]))
 
         dockDevices = []
-        dockGroupAdd = []
         addGroups = {}  # {"groupname": gid} added inside the container (gid=None == I don't care)
         if self.conf["enableRocmDevices"]:
             try:
                 if Path("/dev/kfd").is_char_device() and Path("/dev/dri").is_dir():
                     dockDevices += ["/dev/kfd", "/dev/dri"]
-                    dockGroupAdd.append("video")
                 else:
                     raise AliDockError("cannot find the required ROCm devices on your host")
             except OSError as exc:
@@ -301,7 +299,7 @@ class AliDock(object):
                                 ports=fwdPorts,
                                 runtime=dockRuntime,
                                 devices=dockDevices,
-                                group_add=dockGroupAdd)
+                                group_add=addGroups.keys())
 
         return True
 
