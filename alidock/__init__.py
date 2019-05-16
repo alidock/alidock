@@ -6,6 +6,7 @@ from argparse import ArgumentParser
 from time import time, sleep
 from datetime import datetime as dt
 from io import open
+from grp import getgrnam
 import errno
 import os
 import os.path
@@ -23,7 +24,7 @@ import requests
 from requests.exceptions import RequestException
 from pkg_resources import resource_string, parse_version, require
 from alidock.log import Log
-from alidock.util import splitEsc, getUserId, getUserName, execReturn, deactivateVenv
+from alidock.util import splitEsc, getUserId, getUserName, execReturn, deactivateVenv, checkRocm
 
 LOG = Log()
 INSTALLER_URL = "https://raw.githubusercontent.com/alidock/alidock/master/alidock-installer.sh"
@@ -49,6 +50,7 @@ class AliDock(object):
             "dontUpdateImage"   : False,
             "dontUpdateAlidock" : False,
             "useNvidiaRuntime"  : False,
+            "enableRocmDevices" : False,
             "mount"             : [],
             "cvmfs"             : False,
             "web"               : False,
@@ -222,6 +224,14 @@ class AliDock(object):
                 raise AliDockError("cannot create directory {dir} to share with container, "
                                    "check permissions".format(dir=self.conf["dirOutside"]))
 
+        dockDevices = []
+        addGroups = {}  # {"groupname": gid} added inside the container (gid=None == I don't care)
+        if self.conf["enableRocmDevices"] and checkRocm():
+            dockDevices += ["/dev/kfd", "/dev/dri"]
+            addGroups["video"] = getgrnam("video").gr_gid
+        elif self.conf["enableRocmDevices"]:
+            raise AliDockError("cannot enable ROCm: check your ROCm installation")
+
         initShPath = os.path.join(runDir, "init.sh")
         initSh = jinja2.Template(
             resource_string("alidock.helpers", "init.sh.j2").decode("utf-8"))
@@ -231,7 +241,9 @@ class AliDock(object):
                                     dockName=dockName,
                                     userName=self.userName,
                                     userId=getUserId(),
-                                    useWebX11=self.conf["web"]))
+                                    useWebX11=self.conf["web"],
+                                    addGroups=addGroups))
+
         os.chmod(initShPath, 0o700)
 
         if platform.system() == "Darwin":
@@ -276,7 +288,9 @@ class AliDock(object):
                                 name=self.conf["dockName"],
                                 mounts=dockMounts,
                                 ports=fwdPorts,
-                                runtime=dockRuntime)
+                                runtime=dockRuntime,
+                                devices=dockDevices,
+                                group_add=addGroups.keys())
 
         return True
 
@@ -447,6 +461,9 @@ def entrypoint():
     argp.add_argument("--nvidia", dest="useNvidiaRuntime", default=None,
                       action="store_true",
                       help="Launch container using the NVIDIA Docker runtime [useNvidiaRuntime]")
+    argp.add_argument("--rocm", dest="enableRocmDevices", default=None,
+                      action="store_true",
+                      help="Expose devices needed by ROCm [enableRocmDevices]")
     argp.add_argument("--cvmfs", dest="cvmfs", default=None,
                       action="store_true",
                       help="Mount CVMFS inside the container [cvmfs]")

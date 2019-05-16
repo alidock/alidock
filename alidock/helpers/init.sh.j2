@@ -82,6 +82,22 @@ useradd -d "{{sharedDir}}" -M -N -s /bin/bash -u "{{userId}}" "{{userName}}"
 chmod 0755 "{{sharedDir}}"
 chown "{{userName}}" "{{sharedDir}}"
 
+# Create groups
+{%- for groupName,groupId in addGroups.items() -%}
+{%- if groupId is not none %}
+if getent group "{{groupName}}" &> /dev/null; then
+  groupmod -g "{{groupId}}" "{{groupName}}"
+else
+  groupadd -g "{{groupId}}" "{{groupName}}"
+fi
+{%- else %}
+groupadd "{{groupName}}" || true
+{%- endif %}
+{%- endfor %}
+
+# Add user to the list of created groups
+usermod -aG "{{ addGroups.keys()|join(",") }}" "{{userName}}"
+
 # Create a SSH key for that user and authorize it
 rm -rf "{{runDir}}/ssh"
 mkdir -p "{{runDir}}/ssh"
