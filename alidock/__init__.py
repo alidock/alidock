@@ -62,7 +62,8 @@ class AliDock(object):
             "mount"             : [],
             "cvmfs"             : False,
             "web"               : False,
-            "debug"             : False
+            "debug"             : False,
+            "privileged"        : False
         }
 
     def parseConfig(self):
@@ -284,11 +285,14 @@ class AliDock(object):
             fwdPorts["14500/tcp"] = ("127.0.0.1", None)
 
         # Start container with that script
+        if self.conf["privileged"]:
+            LOG.info("Running container without limitation (--privileged), use it at your own risk")
         self.cli.containers.run(self.conf["imageName"],
                                 command=[self.dirInside + "/.alidock-" + dockName + "/init.sh"],
                                 detach=True,
                                 auto_remove=True,
                                 cap_add=["SYS_PTRACE"],
+                                privileged=self.conf["privileged"],
                                 environment=dockEnvironment,
                                 hostname=self.conf["dockName"],
                                 name=self.conf["dockName"],
