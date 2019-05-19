@@ -286,7 +286,8 @@ class AliDock(object):
 
         # Start container with that script
         if self.conf["privileged"]:
-            LOG.info("Running container without limitation (docker run --privileged), use it at your own risk")
+            LOG.info("Running container without limitation (docker run --privileged), "
+                     "use it at your own risk")
         self.cli.containers.run(self.conf["imageName"],
                                 command=[self.dirInside + "/.alidock-" + dockName + "/init.sh"],
                                 detach=True,
