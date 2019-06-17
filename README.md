@@ -27,3 +27,5 @@ and it will download the precompiled binaries for you.
 Your home directory in the container, called `/home/alidock`, is available from outside the
 container in `~/alidock`. This means you can use your favourite text editor or IDE from your laptop,
 no need to edit from inside the container.
+
+📜 Full documentation available [on the Wiki](https://github.com/alidock/alidock/wiki).
