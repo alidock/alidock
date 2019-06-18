@@ -443,36 +443,44 @@ def entrypoint():
     # The following switches can be set in a configuration file
     argp.add_argument("--name", dest="dockName", default=None,
                       help="Override default container name [dockName]")
-    argp.add_argument("--image", dest="imageName", default=None,
-                      help="Override default image name [imageName]")
-    argp.add_argument("--shared", dest="dirOutside", default=None,
-                      help="Override host path of persistent home [dirOutside]")
-    argp.add_argument("--mount", dest="mount", default=None, nargs="+",
-                      help="Host directories to mount under /mnt inside alidock, in the format "
-                           "/external/path[:label[:[rw|ro]]] [mount]")
     argp.add_argument("--update-period", dest="updatePeriod", default=None,
                       help="Override update check period [updatePeriod]")
-    argp.add_argument("--no-update-image", dest="dontUpdateImage", default=None,
-                      action="store_true",
-                      help="Do not update the Docker image [dontUpdateImage]")
     argp.add_argument("--no-update-alidock", dest="dontUpdateAlidock", default=None,
                       action="store_true",
                       help="Do not update alidock automatically [dontUpdateAlidock]")
-    argp.add_argument("--nvidia", dest="useNvidiaRuntime", default=None,
-                      action="store_true",
-                      help="Launch container using the NVIDIA Docker runtime [useNvidiaRuntime]")
-    argp.add_argument("--rocm", dest="enableRocmDevices", default=None,
-                      action="store_true",
-                      help="Expose devices needed by ROCm [enableRocmDevices]")
-    argp.add_argument("--cvmfs", dest="cvmfs", default=None,
-                      action="store_true",
-                      help="Mount CVMFS inside the container [cvmfs]")
-    argp.add_argument("--web", dest="web", default=None,
-                      action="store_true",
-                      help="Make X11 available from a web browser [web]")
     argp.add_argument("--debug", dest="debug", default=None,
                       action="store_true",
                       help="Increase verbosity [debug]")
+
+    # Args valid only when starting the container; they can be set in a config file
+    startArgs = argp.add_argument_group("only valid if container is not running, "
+                                        "not effective otherwise")
+    argsAtStart = {}
+    def addStartArg(*args, **kwargs):
+        startArgs.add_argument(*args, **kwargs)
+        argsAtStart[kwargs["dest"]] = args[0]
+    addStartArg("--image", dest="imageName", default=None,
+                help="Override default image name [imageName]")
+    addStartArg("--shared", dest="dirOutside", default=None,
+                help="Override host path of persistent home [dirOutside]")
+    addStartArg("--mount", dest="mount", default=None, nargs="+",
+                help="Host dirs to mount under /mnt inside alidock, in the format "
+                     "/external/path[:label[:[rw|ro]]] [mount]")
+    addStartArg("--no-update-image", dest="dontUpdateImage", default=None,
+                action="store_true",
+                help="Do not update the Docker image [dontUpdateImage]")
+    addStartArg("--nvidia", dest="useNvidiaRuntime", default=None,
+                action="store_true",
+                help="Use the NVIDIA Docker runtime [useNvidiaRuntime]")
+    addStartArg("--rocm", dest="enableRocmDevices", default=None,
+                action="store_true",
+                help="Expose devices needed by ROCm [enableRocmDevices]")
+    addStartArg("--cvmfs", dest="cvmfs", default=None,
+                action="store_true",
+                help="Mount CVMFS inside the container [cvmfs]")
+    addStartArg("--web", dest="web", default=None,
+                action="store_true",
+                help="Make X11 available from a web browser [web]")
 
     argp.add_argument("action", default="enter", nargs="?",
                       choices=["enter", "root", "exec", "start", "status", "stop"],
@@ -481,13 +489,12 @@ def entrypoint():
     argp.add_argument("shellCmd", nargs=argparse.REMAINDER,
                       help="Command to execute in the container (works with exec)")
 
-
     args = argp.parse_args()
 
     LOG.setQuiet(args.quiet)
 
     try:
-        processActions(args)
+        processActions(args, argsAtStart)
     except AliDockError as exc:
         LOG.error("Cannot continue: {msg}".format(msg=exc))
         exit(10)
@@ -498,7 +505,18 @@ def entrypoint():
         LOG.error("Cannot communicate to Docker, is it running? Full error: {msg}".format(msg=exc))
         exit(12)
 
-def processEnterStart(aliDock, args):
+def checkArgsAtStart(args, argsAtStart):
+    ignoredArgs = []
+    for sta in argsAtStart:
+        if args.__dict__[sta] is not None:
+            ignoredArgs.append(argsAtStart[sta])
+    if ignoredArgs:
+        LOG.warning("The following options will be ignored as alidock is already running:")
+        LOG.warning("    " + ", ".join(ignoredArgs))
+        LOG.warning("You may want to stop alidock first with `alidock stop` and try again.")
+        LOG.warning("Check `alidock --help` for a list of options only valid at start")
+
+def processEnterStart(aliDock, args, argsAtStart):
     created = False
     if not aliDock.isRunning():
         created = True
@@ -514,6 +532,10 @@ def processEnterStart(aliDock, args):
 
         LOG.info("Creating container, hold on")
         aliDock.run()
+    else:
+        # Container is running. Check if user has specified parameters that will be ignored and warn
+        checkArgsAtStart(args, argsAtStart)
+
     if args.action == "enter":
         if (args.tmux or args.tmuxControl) and os.environ.get("TMUX") is None:
             LOG.info("Resuming tmux session in the container")
@@ -550,7 +572,7 @@ def processStop(aliDock):
     LOG.info("Shutting down the container")
     aliDock.stop()
 
-def processActions(args):
+def processActions(args, argsAtStart):
 
     if args.version:
         ver = str(require(__package__)[0].version)
@@ -578,7 +600,7 @@ def processActions(args):
         LOG.warning("Cannot check for alidock updates this time")
 
     if args.action in ["enter", "exec", "root", "start"]:
-        processEnterStart(aliDock, args)
+        processEnterStart(aliDock, args, argsAtStart)
     elif args.action == "status":
         processStatus(aliDock)
     elif args.action == "stop":
