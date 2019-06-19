@@ -1,6 +1,7 @@
 import os.path
 import argparse
 from collections import namedtuple
+import yaml
 
 AliDockArg = namedtuple("AliDockArg", "option config descr")
 
@@ -31,17 +32,21 @@ class AliDockArgumentParser(argparse.ArgumentParser):
     def addArgumentStart(self, *args, **kwargs):
         return self.addArgument(*args, **kwargs, atStart=True)
 
-    def genConfigHelp(self):
+    def genConfigHelp(self, defaultConf):
         confFile = os.path.join(os.path.expanduser("~"), ".alidock-config.yaml")
-        epilog = "if you frequently specify some options you may want to add them to %s " \
-                 "like the following (including `---`):\n---\n" % confFile
+        epilog = "it is possible to specify the most frequently used options in a YAML " \
+                 "configuration file in {confFile}\n" \
+                 "the following options (along with their default values) can be specified " \
+                 "(please include `---` as first line):\n---\n".format(confFile=confFile)
+        yamlLines = {}
         longest = 0
         for opt in self.argsNormal + self.argsAtStart:
             if opt.config:
-                longest = max(longest, len(opt.config))
-        fmt = "%%-%ds: \"see help above for option %%s\"\n" % (longest + 1)
-        for opt in self.argsNormal + self.argsAtStart:
-            if not opt.config:
-                continue
-            epilog += fmt % (opt.config, opt.option)
+                assert opt.config in defaultConf, "option %s expected in default conf" % opt.config
+                yamlLines[opt.option] = yaml.dump({opt.config: defaultConf[opt.config]}).rstrip()
+                longest = max(longest, len(yamlLines[opt.option]))
+        fmt = "%%-%ds  # same as option %%s\n" % longest
+        for yLine in yamlLines:
+            epilog += fmt % (yamlLines[yLine], yLine)
+
         self.epilog = epilog

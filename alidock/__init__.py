@@ -38,12 +38,19 @@ class AliDockError(Exception):
 
 class AliDock(object):
 
-
     def __init__(self, overrideConf=None):
         self.cli = docker.from_env()
         self.dirInside = "/home/alidock"
         self.userName = getUserName()
-        self.conf = {
+        self.conf = self.getDefaultConf()
+        self.parseConfig()
+        self.overrideConfig(overrideConf)
+        self.conf["dockName"] = "{dockName}-{userId}".format(dockName=self.conf["dockName"],
+                                                             userId=getUserId())
+
+    @staticmethod
+    def getDefaultConf():
+        return {
             "dockName"          : "alidock",
             "imageName"         : "alipier/alidock:latest",
             "dirOutside"        : os.path.join("~", "alidock"),
@@ -57,10 +64,6 @@ class AliDock(object):
             "web"               : False,
             "debug"             : False
         }
-        self.parseConfig()
-        self.overrideConfig(overrideConf)
-        self.conf["dockName"] = "{dockName}-{userId}".format(dockName=self.conf["dockName"],
-                                                             userId=getUserId())
 
     def parseConfig(self):
         confFile = os.path.join(os.path.expanduser("~"), ".alidock-config.yaml")
@@ -485,7 +488,7 @@ def entrypoint():
     argp.add_argument("shellCmd", nargs=argparse.REMAINDER,
                       help="Command to execute in the container (works with exec)")
 
-    argp.genConfigHelp()
+    argp.genConfigHelp(AliDock.getDefaultConf())
     args = argp.parse_args()
 
     LOG.setQuiet(args.quiet)
