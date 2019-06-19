@@ -2,7 +2,6 @@
 
 from __future__ import print_function
 import argparse
-from argparse import ArgumentParser
 from time import time, sleep
 from datetime import datetime as dt
 from io import open
@@ -23,6 +22,7 @@ import jinja2
 import requests
 from requests.exceptions import RequestException
 from pkg_resources import resource_string, parse_version, require
+from alidock.argumentparser import AliDockArgumentParser
 from alidock.log import Log
 from alidock.util import splitEsc, getUserId, getUserName, execReturn, deactivateVenv, checkRocm
 
@@ -42,7 +42,15 @@ class AliDock(object):
         self.cli = docker.from_env()
         self.dirInside = "/home/alidock"
         self.userName = getUserName()
-        self.conf = {
+        self.conf = self.getDefaultConf()
+        self.parseConfig()
+        self.overrideConfig(overrideConf)
+        self.conf["dockName"] = "{dockName}-{userId}".format(dockName=self.conf["dockName"],
+                                                             userId=getUserId())
+
+    @staticmethod
+    def getDefaultConf():
+        return {
             "dockName"          : "alidock",
             "imageName"         : "alipier/alidock:latest",
             "dirOutside"        : os.path.join("~", "alidock"),
@@ -56,10 +64,6 @@ class AliDock(object):
             "web"               : False,
             "debug"             : False
         }
-        self.parseConfig()
-        self.overrideConfig(overrideConf)
-        self.conf["dockName"] = "{dockName}-{userId}".format(dockName=self.conf["dockName"],
-                                                             userId=getUserId())
 
     def parseConfig(self):
         confFile = os.path.join(os.path.expanduser("~"), ".alidock-config.yaml")
@@ -425,11 +429,12 @@ class AliDock(object):
                                updateFunc=updateFunc)
 
 def entrypoint():
-    argp = ArgumentParser()
-    argp.add_argument("--quiet", "-q", dest="quiet", default=False, action="store_true",
-                      help="Do not print any message")
-    argp.add_argument("--version", "-v", dest="version", default=False, action="store_true",
-                      help="Print current alidock version on stdout")
+    argp = AliDockArgumentParser(atStartTitle="only valid if container is not running, "
+                                              "not effective otherwise")
+    argp.addArgument("--quiet", "-q", dest="quiet", default=False, action="store_true",
+                     help="Do not print any message")
+    argp.addArgument("--version", "-v", dest="version", default=False, action="store_true",
+                     help="Print current alidock version on stdout")
 
     # tmux: both normal and terminal integration ("control mode")
     tmuxArgs = argp.add_mutually_exclusive_group()
@@ -441,38 +446,40 @@ def entrypoint():
                                "(integration with your terminal)")
 
     # The following switches can be set in a configuration file
-    argp.add_argument("--name", dest="dockName", default=None,
-                      help="Override default container name [dockName]")
-    argp.add_argument("--image", dest="imageName", default=None,
-                      help="Override default image name [imageName]")
-    argp.add_argument("--shared", dest="dirOutside", default=None,
-                      help="Override host path of persistent home [dirOutside]")
-    argp.add_argument("--mount", dest="mount", default=None, nargs="+",
-                      help="Host directories to mount under /mnt inside alidock, in the format "
-                           "/external/path[:label[:[rw|ro]]] [mount]")
-    argp.add_argument("--update-period", dest="updatePeriod", default=None,
-                      help="Override update check period [updatePeriod]")
-    argp.add_argument("--no-update-image", dest="dontUpdateImage", default=None,
-                      action="store_true",
-                      help="Do not update the Docker image [dontUpdateImage]")
-    argp.add_argument("--no-update-alidock", dest="dontUpdateAlidock", default=None,
-                      action="store_true",
-                      help="Do not update alidock automatically [dontUpdateAlidock]")
-    argp.add_argument("--nvidia", dest="useNvidiaRuntime", default=None,
-                      action="store_true",
-                      help="Launch container using the NVIDIA Docker runtime [useNvidiaRuntime]")
-    argp.add_argument("--rocm", dest="enableRocmDevices", default=None,
-                      action="store_true",
-                      help="Expose devices needed by ROCm [enableRocmDevices]")
-    argp.add_argument("--cvmfs", dest="cvmfs", default=None,
-                      action="store_true",
-                      help="Mount CVMFS inside the container [cvmfs]")
-    argp.add_argument("--web", dest="web", default=None,
-                      action="store_true",
-                      help="Make X11 available from a web browser [web]")
-    argp.add_argument("--debug", dest="debug", default=None,
-                      action="store_true",
-                      help="Increase verbosity [debug]")
+    argp.addArgument("--name", dest="dockName", default=None, config=True,
+                     help="Override default container name")
+    argp.addArgument("--update-period", dest="updatePeriod", default=None, config=True,
+                     help="Override update check period")
+    argp.addArgument("--no-update-alidock", dest="dontUpdateAlidock", default=None, config=True,
+                     action="store_true",
+                     help="Do not update alidock automatically")
+    argp.addArgument("--debug", dest="debug", default=None, config=True,
+                     action="store_true",
+                     help="Increase verbosity")
+
+    # Args valid only when starting the container; they can be set in a config file
+    argp.addArgumentStart("--image", dest="imageName", default=None, config=True,
+                          help="Override default image name")
+    argp.addArgumentStart("--shared", dest="dirOutside", default=None, config=True,
+                          help="Override host path of persistent home")
+    argp.addArgumentStart("--mount", dest="mount", default=None, nargs="+", config=True,
+                          help="Host dirs to mount under /mnt inside alidock, in the format "
+                               "/external/path[:label[:[rw|ro]]]")
+    argp.addArgumentStart("--no-update-image", dest="dontUpdateImage", default=None, config=True,
+                          action="store_true",
+                          help="Do not update the Docker image")
+    argp.addArgumentStart("--nvidia", dest="useNvidiaRuntime", default=None, config=True,
+                          action="store_true",
+                          help="Use the NVIDIA Docker runtime")
+    argp.addArgumentStart("--rocm", dest="enableRocmDevices", default=None, config=True,
+                          action="store_true",
+                          help="Expose devices needed by ROCm")
+    argp.addArgumentStart("--cvmfs", dest="cvmfs", default=None, config=True,
+                          action="store_true",
+                          help="Mount CVMFS inside the container")
+    argp.addArgumentStart("--web", dest="web", default=None, config=True,
+                          action="store_true",
+                          help="Make X11 available from a web browser")
 
     argp.add_argument("action", default="enter", nargs="?",
                       choices=["enter", "root", "exec", "start", "status", "stop"],
@@ -481,13 +488,13 @@ def entrypoint():
     argp.add_argument("shellCmd", nargs=argparse.REMAINDER,
                       help="Command to execute in the container (works with exec)")
 
-
+    argp.genConfigHelp(AliDock.getDefaultConf())
     args = argp.parse_args()
 
     LOG.setQuiet(args.quiet)
 
     try:
-        processActions(args)
+        processActions(args, argp.argsAtStart)
     except AliDockError as exc:
         LOG.error("Cannot continue: {msg}".format(msg=exc))
         exit(10)
@@ -498,7 +505,22 @@ def entrypoint():
         LOG.error("Cannot communicate to Docker, is it running? Full error: {msg}".format(msg=exc))
         exit(12)
 
-def processEnterStart(aliDock, args):
+def checkArgsAtStart(args, argsAtStart):
+    ignoredArgs = []
+    for sta in argsAtStart:
+        if args.__dict__[sta.config] is not None:
+            ignoredArgs.append(sta.option)
+    if ignoredArgs:
+        LOG.warning("The following options are being ignored:")
+        for ign in ignoredArgs:
+            LOG.warning("    " + ign)
+        LOG.warning("This is because alidock is already running and they are only valid when a "
+                    "new container is started.")
+        LOG.warning("You may want to stop alidock first with:")
+        LOG.warning("    alidock stop")
+        LOG.warning("and try again. Check `alidock --help` for more information")
+
+def processEnterStart(aliDock, args, argsAtStart):
     created = False
     if not aliDock.isRunning():
         created = True
@@ -514,6 +536,10 @@ def processEnterStart(aliDock, args):
 
         LOG.info("Creating container, hold on")
         aliDock.run()
+    else:
+        # Container is running. Check if user has specified parameters that will be ignored and warn
+        checkArgsAtStart(args, argsAtStart)
+
     if args.action == "enter":
         if (args.tmux or args.tmuxControl) and os.environ.get("TMUX") is None:
             LOG.info("Resuming tmux session in the container")
@@ -550,7 +576,7 @@ def processStop(aliDock):
     LOG.info("Shutting down the container")
     aliDock.stop()
 
-def processActions(args):
+def processActions(args, argsAtStart):
 
     if args.version:
         ver = str(require(__package__)[0].version)
@@ -578,7 +604,7 @@ def processActions(args):
         LOG.warning("Cannot check for alidock updates this time")
 
     if args.action in ["enter", "exec", "root", "start"]:
-        processEnterStart(aliDock, args)
+        processEnterStart(aliDock, args, argsAtStart)
     elif args.action == "status":
         processStatus(aliDock)
     elif args.action == "stop":
