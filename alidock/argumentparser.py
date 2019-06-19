@@ -10,19 +10,23 @@ class AliDockArgumentParser(argparse.ArgumentParser):
        alidock help: addition of normal arguments, addition of arguments only valid when starting a
        new container, and matching between command-line options and configuration file options."""
 
-    def __init__(self, *args, atStartTitle, **kwargs):
+    def __init__(self, atStartTitle):
         self.argsNormal = []
         self.argsAtStart = []
-        super(AliDockArgumentParser, self).__init__(*args,
-                                                    formatter_class=argparse.RawTextHelpFormatter,
-                                                    **kwargs)
+        super(AliDockArgumentParser, self).__init__(formatter_class=argparse.RawTextHelpFormatter)
         self.groupAtStart = self.add_argument_group(atStartTitle)
 
-    def addArgument(self, *args, atStart=False, config=False, **kwargs):
+    def addArgument(self, *args, **kwargs):
         configVar = None
-        if config:
+        if kwargs.get("config", False):
             configVar = kwargs["dest"]
             kwargs["help"] = kwargs.get("help", "") + " [" + configVar + "]"
+        atStart = kwargs.get("atStart", False)
+        for key in ("atStart", "config"):
+            try:
+                del kwargs[key]
+            except KeyError:
+                pass
         if atStart:
             self.argsAtStart.append(AliDockArg(args[0], configVar, kwargs.get("help", "")))
             return self.groupAtStart.add_argument(*args, **kwargs)
@@ -30,7 +34,8 @@ class AliDockArgumentParser(argparse.ArgumentParser):
         return self.add_argument(*args, **kwargs)
 
     def addArgumentStart(self, *args, **kwargs):
-        return self.addArgument(*args, **kwargs, atStart=True)
+        kwargs["atStart"] = True
+        return self.addArgument(*args, **kwargs)
 
     def genConfigHelp(self, defaultConf):
         confFile = os.path.join(os.path.expanduser("~"), ".alidock-config.yaml")
