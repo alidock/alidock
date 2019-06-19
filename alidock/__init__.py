@@ -511,10 +511,14 @@ def checkArgsAtStart(args, argsAtStart):
         if args.__dict__[sta] is not None:
             ignoredArgs.append(argsAtStart[sta])
     if ignoredArgs:
-        LOG.warning("The following options will be ignored as alidock is already running:")
-        LOG.warning("    " + ", ".join(ignoredArgs))
-        LOG.warning("You may want to stop alidock first with `alidock stop` and try again.")
-        LOG.warning("Check `alidock --help` for a list of options only valid at start")
+        LOG.warning("The following options are being ignored:")
+        for ign in ignoredArgs:
+            LOG.warning("    " + ign)
+        LOG.warning("This is because alidock is already running and they are only valid when a "
+                    "new container is started.")
+        LOG.warning("You may want to stop alidock first with:")
+        LOG.warning("    alidock stop")
+        LOG.warning("and try again. Check `alidock --help` for more information")
 
 def processEnterStart(aliDock, args, argsAtStart):
     created = False
