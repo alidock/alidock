@@ -48,7 +48,8 @@ class AliDockArgumentParser(argparse.ArgumentParser):
         for opt in self.argsNormal + self.argsAtStart:
             if opt.config:
                 assert opt.config in defaultConf, "option %s expected in default conf" % opt.config
-                yamlLines[opt.option] = yaml.dump({opt.config: defaultConf[opt.config]}).rstrip()
+                optd = {opt.config: defaultConf[opt.config]}
+                yamlLines[opt.option] = yaml.dump(optd, default_flow_style=False).rstrip()
                 longest = max(longest, len(yamlLines[opt.option]))
         fmt = "%%-%ds  # same as option %%s\n" % longest
         for yLine in yamlLines:
