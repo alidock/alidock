@@ -5,7 +5,6 @@ import argparse
 from time import time, sleep
 from datetime import datetime as dt
 from io import open
-from grp import getgrnam
 import errno
 import os
 import os.path
@@ -24,7 +23,8 @@ from requests.exceptions import RequestException
 from pkg_resources import resource_string, parse_version, require
 from alidock.argumentparser import AliDockArgumentParser
 from alidock.log import Log
-from alidock.util import splitEsc, getUserId, getUserName, execReturn, deactivateVenv, checkRocm
+from alidock.util import splitEsc, getUserId, getUserName, execReturn, deactivateVenv, \
+  getRocmVideoGid
 
 LOG = Log()
 INSTALLER_URL = "https://raw.githubusercontent.com/alidock/alidock/master/alidock-installer.sh"
@@ -229,12 +229,14 @@ class AliDock(object):
                                    "check permissions".format(dir=self.conf["dirOutside"]))
 
         dockDevices = []
-        addGroups = {}  # {"groupname": gid} added inside the container (gid=None == I don't care)
-        if self.conf["enableRocmDevices"] and checkRocm():
+        # {"groupname": gid} added inside the container (gid=None == I don't care)
+        addGroups = {"video": getRocmVideoGid()}
+        if self.conf["enableRocmDevices"] and addGroups["video"]:
             dockDevices += ["/dev/kfd", "/dev/dri"]
-            addGroups["video"] = getgrnam("video").gr_gid
         elif self.conf["enableRocmDevices"]:
             raise AliDockError("cannot enable ROCm: check your ROCm installation")
+        else:
+            del addGroups["video"]
 
         initShPath = os.path.join(runDir, "init.sh")
         initSh = jinja2.Template(

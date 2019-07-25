@@ -3,7 +3,6 @@ import os.path
 import re
 import sys
 import platform
-from grp import getgrnam
 from pathlib import Path
 from subprocess import call
 from hashlib import md5
@@ -67,17 +66,17 @@ def deactivateVenv(env):
                             if not os.path.realpath(os.path.expanduser(x)).startswith(venvPrefix))
     del env["VIRTUAL_ENV"]
 
-def checkRocm():
+def getRocmVideoGid():
     try:
         if not Path("/dev/kfd").is_char_device() or not Path("/dev/dri").is_dir():
-            return False
+            return None
     except OSError:
-        return False
+        return None
     try:
-        getgrnam("video")
-    except KeyError:
-        return False
-    return True
+        from grp import getgrnam
+        return getgrnam("video").gr_gid
+    except (KeyError, AttributeError, ModuleNotFoundError):  # pylint: disable=undefined-variable
+        return None
 
 if platform.system() == "Windows":
     def execReturn(_, args):
