@@ -296,7 +296,8 @@ class AliDock(object):
                                 ports=fwdPorts,
                                 runtime=dockRuntime,
                                 devices=dockDevices,
-                                group_add=addGroups.keys())
+                                group_add=addGroups.keys(),
+                                shm_size="1G")
 
         return True
 
