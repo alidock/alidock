@@ -349,7 +349,10 @@ class AliDock(object):
                     if not os.path.isdir(tsDir) or exc.errno != errno.EEXIST:
                         raise exc
                 with open(tsFn, "w") as fil:
-                    fil.write(str(now))
+                    try:
+                        fil.write(str(now))
+                    except TypeError:
+                        fil.write(str(now).decode("utf-8"))
 
             if caught is not None:
                 # pylint: disable=raising-bad-type
