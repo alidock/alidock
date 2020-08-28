@@ -40,7 +40,8 @@ else:
     HASH = md5()
     try:
         HASH.update(os.getlogin().lower().encode())
-    except FileNotFoundError:
+    # Ugly hack fo portability
+    except EnvironmentError:
         HASH.update(pwd.getpwuid(os.getuid())[0].lower().encode())
 
     USERID = 10000 + int(HASH.hexdigest()[2:5], 16)
@@ -60,7 +61,8 @@ def getUserName():
     casing and purely numerical usernames)."""
     try:
         userName = re.sub("[^0-9a-z_-]", "_", os.getlogin().lower())
-    except FileNotFoundError:
+    # Ugly hack fo portability
+    except EnvironmentError:
         userName = re.sub("[^0-9a-z_-]", "_", pwd.getpwuid(os.getuid())[0].lower())
 
     return "u" + userName if userName.isdigit() else userName
