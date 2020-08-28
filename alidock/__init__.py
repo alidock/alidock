@@ -52,7 +52,7 @@ class AliDock(object):
     def getDefaultConf():
         return {
             "dockName"          : "alidock",
-            "imageName"         : "alipier/alidock:latest",
+            "imageName"         : "alisw/alidock:latest",
             "dirOutside"        : os.path.join("~", "alidock"),
             "updatePeriod"      : 43200,
             "dontUpdateImage"   : False,
