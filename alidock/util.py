@@ -1,11 +1,13 @@
 import os
 import os.path
+import pwd
 import re
 import sys
 import platform
 from pathlib import Path
 from subprocess import call
 from hashlib import md5
+
 
 def splitEsc(inp, delim, nDelim):
     """Splits input string inp with nDelim delimiters. Returns a tuple of nDelim+1 components: some
@@ -31,13 +33,20 @@ def splitEsc(inp, delim, nDelim):
         return (first,) + splitEsc(remainder, delim, nDelim-1)
     return (first, remainder)
 
+
 if hasattr(os, "getuid"):
     USERID = os.getuid()  # pylint: disable=no-member
 else:
     HASH = md5()
-    HASH.update(os.getlogin().lower().encode())
+    try:
+        HASH.update(os.getlogin().lower().encode())
+    # Ugly hack fo portability
+    except EnvironmentError:
+        HASH.update(pwd.getpwuid(os.getuid())[0].lower().encode())
+
     USERID = 10000 + int(HASH.hexdigest()[2:5], 16)
     del HASH
+
 
 def getUserId():
     """Return the current user's numeric identifier according to the operating system. When the
@@ -45,11 +54,17 @@ def getUserId():
     login name."""
     return USERID
 
+
 def getUserName():
     """Return the username to be used inside the container. Username is computed according to the
     host system's username, and sanitized appropriately (in particular we handle special symbols,
     casing and purely numerical usernames)."""
-    userName = re.sub("[^0-9a-z_-]", "_", os.getlogin().lower())
+    try:
+        userName = re.sub("[^0-9a-z_-]", "_", os.getlogin().lower())
+    # Ugly hack fo portability
+    except EnvironmentError:
+        userName = re.sub("[^0-9a-z_-]", "_", pwd.getpwuid(os.getuid())[0].lower())
+
     return "u" + userName if userName.isdigit() else userName
 
 def deactivateVenv(env):
