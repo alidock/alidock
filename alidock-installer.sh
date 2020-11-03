@@ -9,8 +9,6 @@
 set -e
 set -o pipefail
 
-VIRTUALENV_VERSION=16.2.0
-[[ $(uname) != Linux ]] || VIRTUALENV_VERSION=16.0.0  # pypa/virtualenv#1270
 TMPDIR=$(mktemp -d /tmp/alidock-installer-XXXXX)
 VENV_DEST="$HOME/.virtualenvs/alidock"
 PROG_DIR=$(cd "$(dirname "$0")"; pwd)
@@ -101,11 +99,10 @@ case "$MODE" in
   *) URL="alidock==$MODE" ;;
 esac
 
-# Favour `python3`, fall back on `python`
+# Check for Python 3
 PYTHON_BIN=python3
-type "$PYTHON_BIN" &> /dev/null || PYTHON_BIN=python
-if ! type "$PYTHON_BIN" &> /dev/null; then
-  perr "It appears Python is not available on your system: cannot continue"
+if ! type "${PYTHON_BIN}" &> /dev/null; then
+  perr "python3 executable not found. Alidock supports Python 3 only."
   exit 3
 fi
 
@@ -127,19 +124,16 @@ fi
 
 pushd "$TMPDIR" &> /dev/null
   PYTHON_INFO="$("$PYTHON_BIN" --version 2>&1 | grep Python) ("$PYTHON_BIN")"
-  pinfo "Creating an environment for alidock using $PYTHON_INFO and virtualenv $VIRTUALENV_VERSION"
-  curl -Lso - https://github.com/pypa/virtualenv/tarball/${VIRTUALENV_VERSION} | tar xzf -
+  pinfo "Creating an environment for alidock using $PYTHON_INFO"
   if [[ -d $VENV_DEST ]]; then
     rm -rf "${VENV_DEST}.bak"
     mv "$VENV_DEST" "${VENV_DEST}.bak"  # make backup of current venv
   fi
-  VIRTUALENV_BIN=$(echo pypa-virtualenv-*/virtualenv.py)
-  [[ -e $VIRTUALENV_BIN ]] || VIRTUALENV_BIN=$(echo pypa-virtualenv-*/src/virtualenv.py)
-  swallow "$PYTHON_BIN" "$VIRTUALENV_BIN" "$VENV_DEST" || restore_quit
+  swallow "$PYTHON_BIN" -m venv "$VENV_DEST" || restore_quit
 popd &> /dev/null
 
 pinfo "Installing alidock under $VENV_DEST"
-swallow source "$VENV_DEST/bin/activate"
+source "$VENV_DEST/bin/activate"
 
 swallow pip install --upgrade "${URL[@]}" || restore_quit
 rm -rf "${VENV_DEST}.bak"  # not needed anymore
