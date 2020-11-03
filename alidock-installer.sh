@@ -133,7 +133,6 @@ pushd "$TMPDIR" &> /dev/null
 popd &> /dev/null
 
 pinfo "Installing alidock under $VENV_DEST"
-pinfo "qui"
 source "$VENV_DEST/bin/activate"
 
 swallow pip install --upgrade "${URL[@]}" || restore_quit
