@@ -6,7 +6,7 @@
 # virtualenv. We make sure we are using our own isolated Python environment for
 # it, and it should work seamlessly without being root.
 
-set -ex
+set -e
 set -o pipefail
 
 TMPDIR=$(mktemp -d /tmp/alidock-installer-XXXXX)
