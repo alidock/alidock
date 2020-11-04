@@ -89,7 +89,7 @@ class AliDock(object):
                 runStatus["image"] = runContainer.image.attrs["RepoTags"][0]
             except IndexError:
                 runStatus["image"] = runContainer.image.attrs["Id"]
-        except docker.errors.NotFound:
+        except (docker.errors.NotFound, requests.exceptions.ChunkedEncodingError):
             pass
         return runStatus
 
@@ -99,7 +99,7 @@ class AliDock(object):
         try:
             attrs = self.cli.containers.get(self.conf["dockName"]).attrs
             sshPort = attrs["NetworkSettings"]["Ports"]["22/tcp"][0]["HostPort"]
-        except (docker.errors.NotFound, KeyError) as exc:
+        except (docker.errors.NotFound, KeyError, requests.exceptions.ChunkedEncodingError) as exc:
             outLog = os.path.join(outPath, "log.txt")
             try:
                 with open(outLog, "a+"):
@@ -152,7 +152,7 @@ class AliDock(object):
         try:
             attrs = self.cli.containers.get(self.conf["dockName"]).attrs
             xPort = attrs["NetworkSettings"]["Ports"]["14500/tcp"][0]["HostPort"]
-        except (docker.errors.NotFound, KeyError):
+        except (docker.errors.NotFound, KeyError, requests.exceptions.ChunkedEncodingError):
             xPort = None
         if not xPort and platform.system() == "Windows" and "DISPLAY" not in os.environ:
             # On Windows if no DISPLAY environment is set we assume a sensible default
@@ -304,7 +304,7 @@ class AliDock(object):
     def stop(self):
         try:
             self.cli.containers.get(self.conf["dockName"]).remove(force=True)
-        except docker.errors.NotFound:
+        except (docker.errors.NotFound, requests.exceptions.ChunkedEncodingError):
             pass  # final state is fine, container is gone
 
     def pull(self):
