@@ -3,7 +3,7 @@
 # Init script for alidock that runs inside the container. Auto-generated.
 
 # Log into the shared directory to allow debug
-exec &> >(tee "{{runDir}}/log.txt")
+# exec &> >(tee "{{runDir}}/log.txt")
 cd /
 
 # Check whether we have a persistent native volume and make it usable
