@@ -57,3 +57,5 @@ jobs:
           set -o pipefail
           ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"  # Install Homebrew
           brew cask install docker
+          docker info
+          docker ps -a
