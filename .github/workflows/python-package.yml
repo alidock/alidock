@@ -38,3 +38,22 @@ jobs:
     - name: Test alidock hello-world
       run: |
         ci/alidock-hello.sh
+
+  build-macos-latest:
+    runs-on: macOS-latest
+    strategy:
+      matrix:
+        python-version: [3.8] # 3.5, 3.6, 3.7, 
+      
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Docker
+        run: |
+          set -e
+          set -o pipefail
+          ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"  # Install Homebrew
+          brew cask install docker
