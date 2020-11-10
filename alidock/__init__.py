@@ -15,12 +15,12 @@ import platform
 import subprocess
 import yaml
 from yaml import YAMLError
-import docker
-from docker.types import Mount
 import jinja2
 import requests
 from requests.exceptions import RequestException
 from pkg_resources import resource_string, parse_version, require
+import docker
+from docker.types import Mount
 from alidock.argumentparser import AliDockArgumentParser
 from alidock.log import Log
 from alidock.util import splitEsc, getUserId, getUserName, execReturn, deactivateVenv, \

@@ -119,7 +119,9 @@ fi
 # Check if Docker is there and user can use it
 if [[ $CHECK_DOCKER ]]; then
   pinfo "Checking if your Docker installation works"
-  swallow docker run -it --rm hello-world
+  IT=
+  [[ -t 1 ]] && IT="-it" || IT=""
+  swallow docker run $IT --rm hello-world
 fi
 
 pushd "$TMPDIR" &> /dev/null
