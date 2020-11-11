@@ -53,9 +53,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Docker
         run: |
-          set -e
+          set -ex
           set -o pipefail
           ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"  # Install Homebrew
           brew cask install docker
           open --hide --background -a Docker
+          ls /usr/local/bin/docker
           docker ps -a
