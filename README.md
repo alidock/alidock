@@ -10,6 +10,10 @@ then:
 
     bash <(curl -fsSL https://raw.githubusercontent.com/alidock/alidock/master/alidock-installer.sh)
 
+or, if your shell is zsh (default for MacOS Catalina):
+
+    zsh <(curl -fsSL https://raw.githubusercontent.com/alidock/alidock/master/alidock-installer.sh)
+    
 Windows users can [install the package with pip](https://pypi.org/pypi/alidock) instead.
 
 You may need to close and reopen your terminal as advised. Run alidock now:
