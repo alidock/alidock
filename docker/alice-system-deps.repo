@@ -1,0 +1,5 @@
+[alice-system-deps]
+name=alice-system-deps
+baseurl=https://s3.cern.ch/swift/v1/alibuild-repo/RPMS/o2-full-deps_x86-64/
+enabled=1
+gpgcheck=0

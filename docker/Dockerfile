@@ -2,8 +2,9 @@ FROM alisw/slc7-builder
 LABEL maintainer="Matteo Concas <mconcas@cern.ch>"
 ADD alonid-llvm-3.9.0.repo /etc/yum.repos.d/alonid-llvm-3.9.0.repo
 ADD xpra.repo /etc/yum.repos.d/xpra.repo
+ADD alice-system-deps.repo /etc/yum.repos.d/alice-system-deps.repo
 RUN rpmdb --rebuilddb && yum clean all && rm -rf /var/cache/yum && \
-    yum install -y xcalc tmux htop bash-completion tig pigz nano ninja-build clang-3.9.0 xterm parallel && \
+    yum install -y alice-o2-full-deps xcalc tmux htop bash-completion tig pigz nano ninja-build clang-3.9.0 xterm parallel && \
     yum install -y xpra-3.0.10 && \
     ln -nfs /usr/bin/ninja-build /usr/local/bin/ninja && \
     ln -nfs /opt/llvm-3.9.0/bin/* /usr/local/bin/ && \
