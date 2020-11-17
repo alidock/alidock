@@ -17,6 +17,6 @@ jobs:
         name: alipier/alidock
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-        dockerfile: docker/dockerfile
+        dockerfile: docker/Dockerfile
         context: docker
         tags: "latest,cc7"
