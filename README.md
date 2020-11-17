@@ -6,10 +6,10 @@ alidock
 [![Docker pulls](https://img.shields.io/docker/pulls/alisw/alidock.svg?logo=docker&label=pulls)](https://hub.docker.com/r/alisw/alidock)
 
 Run your ALICE environment from a container. Install [Docker](https://docs.docker.com/install/),
-then:
+then\*:
 
-    bash <(curl -fsSL https://raw.githubusercontent.com/alidock/alidock/master/alidock-installer.sh)
-
+    ${SHELL} <(curl -fsSL https://raw.githubusercontent.com/alidock/alidock/master/alidock-installer.sh)
+   
 Windows users can [install the package with pip](https://pypi.org/pypi/alidock) instead.
 
 You may need to close and reopen your terminal as advised. Run alidock now:
@@ -29,3 +29,5 @@ container in `~/alidock`. This means you can use your favourite text editor or I
 no need to edit from inside the container.
 
 📜 Full documentation available [on the Wiki](https://github.com/alidock/alidock/wiki).
+
+\* bash is supported, zsh should work too.
