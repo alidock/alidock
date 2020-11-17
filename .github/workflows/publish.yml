@@ -3,9 +3,9 @@ name: Publish Docker image
 on:
   push:
     branches:
-      - master
+    - master
     paths:
-      - 'docker'
+    - 'docker/**'
 jobs:
   build:
     runs-on: ubuntu-latest
