@@ -1,10 +1,11 @@
 # This Action for Docker uses the Git branch as the Docker tag for building and pushing the container. Hereby the master-branch is published as the latest-tag.
-
 name: Publish Docker image
 on:
   push:
+    branches:
+      - master
     paths:
-    - 'docker'
+      - 'docker'
 jobs:
   build:
     runs-on: ubuntu-latest
