@@ -68,8 +68,10 @@ SETUP = Setup(
         "Intended Audience :: Developers",
         "Topic :: Scientific/Engineering :: Physics",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
     ],
 
     # What does your project relate to?
@@ -84,7 +86,7 @@ SETUP = Setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=["requests", "PyYaml", "docker", "Jinja2", "colorama", "pathlib"],
 
-    python_requires=">=2.7",
+    python_requires=">=3.5",
 
     # List additional groups of dependencies here (e.g. development dependencies). You can install
     # these using the following syntax, for example:
