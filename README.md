@@ -2,6 +2,7 @@ alidock
 =======
 
 [![Build Status](https://travis-ci.com/alidock/alidock.svg?branch=master)](https://travis-ci.com/alidock/alidock)
+![Python package](https://github.com/alidock/alidock/workflows/Python%20package/badge.svg)
 [![PyPI version](https://badge.fury.io/py/alidock.svg)](https://badge.fury.io/py/alidock)
 [![Docker pulls](https://img.shields.io/docker/pulls/alisw/alidock.svg?logo=docker&label=pulls)](https://hub.docker.com/r/alisw/alidock)
 ![](https://img.shields.io/github/license/alidock/alidock)
