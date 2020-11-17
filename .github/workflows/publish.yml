@@ -1,0 +1,21 @@
+# This Action for Docker uses the Git branch as the Docker tag for building and pushing the container. Hereby the master-branch is published as the latest-tag.
+
+name: Publish Docker image
+on:
+  push:
+    paths:
+    - 'docker'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: Publish to Registry
+      uses: elgohr/Publish-Docker-Github-Action@master
+      with:
+        name: alipier/alidock
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        dockerfile: docker/dockerfile
+        context: docker
+        tags: "latest,cc7"
