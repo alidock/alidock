@@ -5,7 +5,7 @@ ADD xpra.repo /etc/yum.repos.d/xpra.repo
 ADD alice-system-deps.repo /etc/yum.repos.d/alice-system-deps.repo
 RUN rpmdb --rebuilddb && yum clean all && rm -rf /var/cache/yum && \
     yum install -y alice-o2-full-deps xcalc tmux htop bash-completion tig pigz nano ninja-build clang-3.9.0 xterm parallel && \
-    yum install -y xpra-3.0.12 && \
+    yum install -y xpra-3.0.13 && \
     ln -nfs /usr/bin/ninja-build /usr/local/bin/ninja && \
     ln -nfs /opt/llvm-3.9.0/bin/* /usr/local/bin/ && \
     yum clean all && rm -rf /var/cache/yum
@@ -28,4 +28,4 @@ RUN cd /tmp && \
 RUN cd /usr/local/bin && \
     curl -L https://github.com/direnv/direnv/releases/download/v2.20.0/direnv.linux-amd64 -o direnv && \
     chmod 0755 direnv
-RUN pip install alibuild==v1.6.4
+RUN pip install alibuild==v1.7.1
