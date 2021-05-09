@@ -1,3 +1,5 @@
+_**Disclaimer**: alidock is a community-maintained tool, on best-effort basis. It has been conceived to be used in specific situations like analysis tutorials events. While alidock can be a convenient tool also for facilitate software development/deployment it is **not** either the official nor the recommended tool for installing experiment software. Please refer to: https://alice-doc.github.io/alice-analysis-tutorial for further information on installing ALICE software._
+
 alidock
 =======
 
