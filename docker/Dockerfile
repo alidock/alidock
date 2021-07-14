@@ -28,4 +28,4 @@ RUN cd /tmp && \
 RUN cd /usr/local/bin && \
     curl -L https://github.com/direnv/direnv/releases/download/v2.20.0/direnv.linux-amd64 -o direnv && \
     chmod 0755 direnv
-RUN pip3 install alibuild==1.8.7
+RUN pip3 install alibuild==1.8.8
